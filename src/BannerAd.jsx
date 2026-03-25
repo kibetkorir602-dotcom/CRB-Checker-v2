@@ -44,7 +44,7 @@ function BannerAd() {
       <div className="banner-content">
         <h3>Get Instant Loan To Mpesa</h3>
         <p>Special Offer Just For You.</p>
-        <NavLink to="https://faidafunds.onrender.com/" className="ad-btn" target="_blank">
+        <NavLink to="loan" className="ad-btn" target="_blank">
           Apply Now
         </NavLink>
       </div>
