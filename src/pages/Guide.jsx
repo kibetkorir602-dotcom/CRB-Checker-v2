@@ -1,4 +1,3 @@
-import './Guide.css'
 import { NavLink } from 'react-router-dom';
 
 function Guide() {

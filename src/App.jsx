@@ -1,14 +1,14 @@
-import { useState } from 'react'
-import './App.css'
-import CreditCheck from './pages/CRB/CreditCheck'
+import './App2.css'
+import CreditCheck from './pages/CreditCheck'
 import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
-import Home from './pages/Home/Home'
-import Guide from './pages/Guide/Guide'
-import ServicePayment from './pages/deposit'
-import CreditCheckStatus from './pages/CRB/CreditCheckStatus'
-import EligibleLoans from './pages/CRB/EligibleLoans'
-import LoanApplication from './pages/LoanApplication/LoanApplication'
-import LoanEligibility from './pages/CRB/LoanEligibility'
+import Home from './pages/Home'
+import Guide from './pages/Guide'
+import ServicePayment from './pages/payhero_deposit'
+import CreditCheckStatus from './pages/CreditCheckStatus'
+import EligibleLoans from './pages/EligibleLoans'
+import LoanApplication from './pages/LoanApplication'
+import LoanEligibility from './pages/LoanEligibility'
+import BannerAd from './BannerAd'
 
 function App() {
 
@@ -23,6 +23,7 @@ function App() {
           </div>
         </div>
       </header>
+      <BannerAd />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="crb-check" element={<CreditCheck />} />

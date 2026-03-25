@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./LoanApplication.css";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 
@@ -7,10 +6,23 @@ function LoanApplication() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({
     name: "",
-    phone_number: ""
+    phone_number: "",
   });
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // PayHero API configuration
+  const PAYHERO_API_BASE = 'https://backend.payhero.co.ke/api/v2';
+  const AUTH_TOKEN = 'Basic bnhvR1cxSVZqMFVoVVNHMmtTc3A6czFmcFF0NFRJa0lreFowYXZVWjdkRDRkdHJKeUtRaUxldjdoVVZVTw==';//cmxZdTh4dGtTUG1EZVZTa1JXZDQ6UndETHdMcmd4Z3lVRmtKYXlzS09UNjNYS1Bvemh0T0xXZ09IOGgwOA==';
+
+  // Your payment channel IDs from the console output
+  const CHANNELS = {
+    COOP_BANK: 3123,      // Co-operative Bank channel
+    SASAPAY_WALLET: 4201   // SASAPAY WALLET channel
+  };
+  
+  // Use the SASAPAY wallet for M-Pesa STK Push
+  const CHANNEL_ID = CHANNELS.COOP_BANK;
 
   // Loan options data
   const loanOptions = [
@@ -27,151 +39,155 @@ function LoanApplication() {
     { amount: 39800, fee: 730 },
     { amount: 44200, fee: 1010 },
     { amount: 48600, fee: 1600 },
-    { amount: 60600, fee: 2050 }
+    { amount: 60600, fee: 2050 },
   ];
 
   useEffect(() => {
     // Load user data from localStorage or sessionStorage
-    const storedData = localStorage.getItem('crbCheckData');
+    const storedData = localStorage.getItem("crbCheckData");
     if (storedData) {
       const formData = JSON.parse(storedData);
       setUserData({
         name: formData.fullName || "Customer",
-        phone_number: formData.phoneNumber || ""
+        phone_number: formData.phoneNumber || "",
       });
     }
-    
+
     // Check for session storage data
-    const sessionData = JSON.parse(sessionStorage.getItem('myLoan') || '{}');
+    const sessionData = JSON.parse(sessionStorage.getItem("myLoan") || "{}");
     if (sessionData.phone_number) {
-      setUserData(prev => ({
+      setUserData((prev) => ({
         ...prev,
         name: sessionData.name || prev.name,
-        phone_number: sessionData.phone_number || prev.phone_number
+        phone_number: sessionData.phone_number || prev.phone_number,
       }));
     }
+
+    // Fetch and log your payment channels
+    const fetchPaymentChannels = async () => {
+      try {
+        const response = await fetch(`${PAYHERO_API_BASE}/payment_channels?is_active=true`, {
+          headers: {
+            'Authorization': AUTH_TOKEN,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        console.log('Your Payment Channels:', data.payment_channels);
+      } catch (error) {
+        console.error('Error fetching channels:', error);
+      }
+    };
+    
+    fetchPaymentChannels();
   }, []);
 
   const formatPhoneNumber = (phone) => {
+    // Remove all non-digit characters
     let p = phone.toString().replace(/\D/g, "");
+    
+    // If it starts with 0, keep it as is for PayHero (they expect 07... format)
     if (p.startsWith("0")) {
-      return "254" + p.substring(1);
+      return p; // Return as is: 07XXXXXXXX
     }
-    if (p.startsWith("7") || p.startsWith("1")) {
-      return "254" + p;
+    
+    // If it starts with 7, add 0
+    if (p.startsWith("7")) {
+      return "0" + p;
     }
+    
+    // If it's in 254 format, convert to 07 format
     if (p.startsWith("254")) {
-      return p;
+      return "0" + p.substring(3);
     }
+    
     return p;
   };
 
-  const generateRandomEmail = () => {
-    const letters = "abcdefghijklmnopqrstuvwxyz";
-    const numbers = "0123456789";
-    const domains = ["gmail.com", "yahoo.com", "outlook.com"];
-
-    let username = "";
-    const usernameLength = Math.floor(Math.random() * 5) + 8;
-
-    for (let i = 0; i < usernameLength; i++) {
-      if (i < 6) {
-        username += letters.charAt(Math.floor(Math.random() * letters.length));
-      } else {
-        if (Math.random() < 0.6) {
-          username += letters.charAt(Math.floor(Math.random() * letters.length));
-        } else {
-          username += numbers.charAt(Math.floor(Math.random() * numbers.length));
-        }
+const checkTransactionStatus = async (reference) => {
+  try {
+    // Use the correct endpoint from PayHero docs: /api/v2/transaction-status
+    const response = await fetch(`${PAYHERO_API_BASE}/transaction-status?reference=${reference}`, {
+      headers: {
+        'Authorization': AUTH_TOKEN,
+        'Content-Type': 'application/json'
       }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.error('Authentication failed - check your auth token');
+        return { status: 'PENDING' };
+      }
+      return { status: 'PENDING' };
+    }
+    
+    const data = await response.json();
+    console.log('Transaction status:', data);
+    return data;
+  } catch (error) {
+    console.error('Status check error:', error);
+    return { status: 'PENDING' };
+  }
+};
+
+const pollTransactionStatus = (reference, loan, phone) => {
+  let attempts = 0;
+  const maxAttempts = 30; // 30 attempts * 5 seconds = 2.5 minutes max
+  let pollInterval;
+
+  const checkStatus = async () => {
+    if (attempts >= maxAttempts) {
+      clearInterval(pollInterval);
+      Swal.fire({
+        title: "Payment Timeout",
+        html: "⏰ Payment monitoring timeout. Please check your transaction history.",
+        icon: "warning",
+        confirmButtonText: "OK",
+      });
+      return;
     }
 
-    const domain = domains[Math.floor(Math.random() * domains.length)];
-    return `${username}@${domain}`;
-  };
+    attempts++;
 
-  const startPaymentPolling = (reference, loan, phone) => {
-    let attempts = 0;
-    const maxAttempts = 30;
-
-    const checkStatus = async () => {
-      if (attempts >= maxAttempts) {
+    try {
+      // Use PayHero's transaction-status endpoint
+      const statusData = await checkTransactionStatus(reference);
+      
+      // Check if payment was successful
+      if (statusData.success && statusData.status === "SUCCESS") {
+        clearInterval(pollInterval);
+        showSuccessMessage(loan, phone, reference);
+        return;
+      }
+      
+      // If payment failed
+      if (statusData.status === "FAILED") {
+        clearInterval(pollInterval);
         Swal.fire({
-          title: "Payment Timeout",
-          html: "⏰ Payment monitoring timeout. Please check your transaction history.",
-          icon: "warning",
+          title: "Payment Failed",
+          html: "❌ The payment was not completed. Please try again.",
+          icon: "error",
           confirmButtonText: "OK",
         });
         return;
       }
-
-      attempts++;
-
-      try {
-        const response = await fetch(
-          `https://crbloan-api-production.up.railway.app/api/status/${reference}`
-        );
-        const data = await response.json();
-
-        if (data.success) {
-          if (data.paid) {
-            // Payment successful
-            showSuccessMessage(loan, phone, reference);
-            return;
-          }
-
-          if (data.can_retry) {
-            Swal.fire({
-              title: "Payment Not Completed",
-              html: "⚠️ Payment not completed. You can try again.",
-              icon: "warning",
-              confirmButtonText: "OK",
-            });
-            return;
-          }
-
-          // Continue polling
-          setTimeout(checkStatus, 6000);
-        }
-      } catch (error) {
-        setTimeout(checkStatus, 6000);
-      }
-    };
-
-    setTimeout(checkStatus, 6000);
-  };
-
-  const submitOTP = async (reference, otp) => {
-    try {
-      const response = await fetch(
-        "https://crbloan-api-production.up.railway.app/api/submit-otp",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            otp: otp.trim(),
-            reference: reference,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        return true;
-      } else {
-        Swal.showValidationMessage(
-          data.message || "Invalid OTP. Please try again."
-        );
-        return false;
-      }
+      
+      // If still QUEUED or PENDING, continue polling
+      console.log(`Payment status: ${statusData.status}, attempt ${attemptes}/${maxAttempts}`);
+      
     } catch (error) {
-      Swal.showValidationMessage("OTP verification failed. Please try again.");
-      return false;
+      console.log('Polling attempt', attempts, 'failed, continuing...');
+      // Continue polling - don't show error
     }
   };
+
+  // Check every 5 seconds
+  pollInterval = setInterval(checkStatus, 5000);
+  
+  // Return interval ID in case we need to clear it
+  return pollInterval;
+};
 
   const showSuccessMessage = (loan, phone, reference) => {
     Swal.fire({
@@ -209,25 +225,25 @@ function LoanApplication() {
   const handleLoanSelection = (loan) => {
     setSelectedLoan(loan);
     // Hide error message when loan is selected
-    const errorMessage = document.getElementById('error-message');
+    const errorMessage = document.getElementById("error-message");
     if (errorMessage) {
-      errorMessage.style.display = 'none';
+      errorMessage.style.display = "none";
     }
-    
+
     // Update session storage
     const updatedData = {
       ...userData,
       loan_amount: loan.amount,
-      processing_fee: loan.fee
+      processing_fee: loan.fee,
     };
-    sessionStorage.setItem('myLoan', JSON.stringify(updatedData));
+    sessionStorage.setItem("myLoan", JSON.stringify(updatedData));
   };
 
   const handleApply = async () => {
     if (!selectedLoan) {
-      const errorMessage = document.getElementById('error-message');
+      const errorMessage = document.getElementById("error-message");
       if (errorMessage) {
-        errorMessage.style.display = 'block';
+        errorMessage.style.display = "block";
       }
       return;
     }
@@ -241,7 +257,7 @@ function LoanApplication() {
       return;
     }
 
-    // Create a custom modal using SweetAlert2's proper API
+    // Confirm loan application modal
     const { value: confirmed } = await Swal.fire({
       title: "Confirm Loan Application",
       html: `
@@ -287,7 +303,7 @@ function LoanApplication() {
       showCloseButton: true,
     });
 
-    // 2. Process Payment if Confirmed
+    // Process Payment if Confirmed
     if (confirmed) {
       Swal.fire({
         title: "Initiating Payment",
@@ -300,89 +316,72 @@ function LoanApplication() {
 
       try {
         const formattedPhone = formatPhoneNumber(userData.phone_number);
-        const email = generateRandomEmail();
         const amount = selectedLoan.fee;
-        
-        // Call Railway API
-        const response = await fetch('https://crbloan-api-production.up.railway.app/api/initialize', {
+        const externalReference = `LOAN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+        console.log('Initiating payment with:', {
+          amount,
+          phone: formattedPhone,
+          channel_id: CHANNEL_ID,
+          external_reference: externalReference
+        });
+
+        // Initiate STK Push using PayHero API
+        const response = await fetch(`${PAYHERO_API_BASE}/payments`, {
           method: 'POST',
           headers: {
+            'Authorization': AUTH_TOKEN,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            email: email,
             amount: amount,
-            phone: formattedPhone
+            phone_number: formattedPhone, // Send in format 07XXXXXXXX
+            channel_id: 3123,
+            provider: 'm-pesa',
+            //external_reference: externalReference,
+            //customer_name: userData.name || 'Customer'
           })
         });
 
         const data = await response.json();
+        console.log('PayHero response:', data);
+
         if (data.success) {
-          if (data.status === 'success') {
-            // Immediate success
-            showSuccessMessage(selectedLoan, formattedPhone, data.reference);
-          } else if (data.requires_authorization) {
-            // Show authorization message and start polling
-            Swal.fire({
-              title: "Check Your Phone",
-              html: `
-                <div style="text-align: center;">
-                  <i class="fas fa-mobile-alt" style="font-size: 48px; color: #065f46;"></i>
-                  <h3 style="margin: 15px 0;">Enter M-Pesa PIN</h3>
-                  <p>Check your phone to authorize payment of <strong>Ksh ${selectedLoan.fee}</strong></p>
-                  <p><small>Phone: ${formattedPhone}</small></p>
-                  <p style="color: #666; font-size: 0.9rem; margin-top: 15px;">
-                    ✅ Payment request sent. Please check your phone and enter your M-Pesa PIN.
-                  </p>
-                </div>
-              `,
-              icon: "info",
-              confirmButtonText: "OK",
-            }).then(() => {
-              startPaymentPolling(data.reference, selectedLoan, formattedPhone);
-            });
-          } else if (data.requires_otp) {
-            // Handle OTP flow
-            Swal.fire({
-              title: "OTP Required",
-              html: "📱 OTP sent! Please check your phone for the authorization code.",
-              input: "text",
-              inputPlaceholder: "Enter OTP",
-              showCancelButton: true,
-              confirmButtonText: "Submit OTP",
-              cancelButtonText: "Cancel",
-              showLoaderOnConfirm: true,
-              preConfirm: async (otp) => {
-                if (!otp) {
-                  Swal.showValidationMessage("Please enter the OTP");
-                  return false;
-                }
-                return await submitOTP(data.reference, otp);
-              }
-            }).then((result) => {
-              if (result.isConfirmed && result.value) {
-                startPaymentPolling(data.reference, selectedLoan, formattedPhone);
-              }
-            });
-          } else {
-            // Generic success
-            Swal.fire({
-              title: "Payment Initiated",
-              html: `📱 ${data.message || "Payment processing..."}`,
-              icon: "info",
-              confirmButtonText: "OK",
-            }).then(() => {
-              startPaymentPolling(data.reference, selectedLoan, formattedPhone);
-            });
-          }
+          // Close the loading modal
+          Swal.close();
+          
+          // Show authorization message
+          Swal.fire({
+            title: "Check Your Phone",
+            html: `
+              <div style="text-align: center;">
+                <i class="fas fa-mobile-alt" style="font-size: 48px; color: #065f46;"></i>
+                <h3 style="margin: 15px 0;">Enter M-Pesa PIN</h3>
+                <p>Check your phone to authorize payment of <strong>Ksh ${selectedLoan.fee}</strong></p>
+                <p><small>Phone: ${formattedPhone}</small></p>
+                <p style="color: #666; font-size: 0.9rem; margin-top: 15px;">
+                  ✅ Payment request sent. Please check your phone and enter your M-Pesa PIN.
+                </p>
+                <p style="font-size: 0.8rem; color: #888; margin-top: 10px;">
+                  Reference: ${data.reference || externalReference}
+                </p>
+              </div>
+            `,
+            icon: "info",
+            confirmButtonText: "OK",
+          }).then(() => {
+            // Start polling your backend for status
+            pollTransactionStatus(data.reference || externalReference, selectedLoan, formattedPhone);
+          });
         } else {
-          throw new Error(data.message || "Payment initialization failed");
+          throw new Error(data.error_message || "Payment initialization failed");
         }
       } catch (error) {
+        console.error('Payment error:', error);
         Swal.fire({
           title: "Payment Failed",
           html: `
-            <p style="font-size: 0.9rem;">${error.message || 'Unable to process payment. Please try again.'}</p>
+            <p style="font-size: 0.9rem;">${error.message || "Unable to process payment. Please try again."}</p>
             <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">
               Ensure your phone number is correct and you have sufficient M-Pesa balance.
             </p>
@@ -400,51 +399,48 @@ function LoanApplication() {
     <div className="loan-application-container">
       <div className="welcome-card">
         <p className="welcome-text">
-          Hi <span className="user-name">{userData.name || "Customer"}</span>, you qualify for these loan options based on your <strong>credit records</strong>.
+          Hi <span className="user-name">{userData.name || "Customer"}</span>,
+          you qualify for these loan options based on your{" "}
+          <strong>credit records</strong>.
         </p>
       </div>
 
       <div className="loan-card">
         <h3 className="card-title">Select Your Loan Amount</h3>
-        
+
         <div className="loan-grid">
           {loanOptions.map((loan, index) => (
-            <div 
-              key={index} 
-              className={`loan-option ${selectedLoan?.amount === loan.amount ? 'selected' : ''}`}
+            <div
+              key={index}
+              className={`loan-option ${selectedLoan?.amount === loan.amount ? "selected" : ""}`}
               onClick={() => handleLoanSelection(loan)}
             >
-              <div className="loan-amount">Ksh {loan.amount.toLocaleString()}</div>
+              <div className="loan-amount">
+                Ksh {loan.amount.toLocaleString()}
+              </div>
               <div className="processing-fee">Fee: Ksh {loan.fee}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <button 
-        id="apply-btn" 
-        className="btn-apply" 
+      <button
+        id="apply-btn"
+        className="btn-apply"
         onClick={handleApply}
         disabled={isProcessing || !selectedLoan}
       >
-        {isProcessing ? "Processing..." : "Get Loan Now"} <i className="fas fa-arrow-right"></i>
+        {isProcessing ? "Processing..." : "Get Loan Now"}{" "}
+        <i className="fas fa-arrow-right"></i>
       </button>
-      
-      <div id="error-message" className="error-message" style={{ display: 'none' }}>
+
+      <div
+        id="error-message"
+        className="error-message"
+        style={{ display: "none" }}
+      >
         Please select a loan amount to continue
       </div>
-
-      {/*<div className="app-promo">
-        <p className="app-promo-text">For loans up to Ksh 80,000, download our app:</p>
-        <a 
-          href="https://play.google.com/store/apps/details?id=com.punksmoothheat.DooChapChap" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="btn-download"
-        >
-          <i className="fab fa-google-play"></i> Download App
-        </a>
-      </div>*/}
 
       <a href="/" className="back-link">
         <i className="fas fa-arrow-left"></i> Back to Home

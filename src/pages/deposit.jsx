@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-//import "./deposit.css";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 
@@ -22,6 +21,33 @@ function ServicePayment() {
       }));
     }
   }, []);
+
+
+  const PayHeroConfig = {
+    Authorization: 'your_PayHero_authorization_token',
+    pesapalConsumerKey: 'your_pesapal_consumer_key',
+    pesapalConsumerSecret: 'your_pesapal_consumer_secret',
+    pesapalApiUrl: 'https://payments.pesapal.com/pesapalv3/api', // Sandbox or production URL
+    pesapalCallbackUrl: 'https://your-application.com/pesapal-callback',
+    pesapalIpnId: 'your_pesapal_ipn_id'
+  };
+
+  const PayHero = new PayHero(PayHeroConfig);
+
+  const payWithPayHeroStk = () => {
+    const paymentDetails = {
+      amount: 10,
+      phone_number: "0740161331",
+      channel_id: 333,
+      provider: "m-pesa",
+      external_reference: "INV-009",
+      callback_url: "https://example.com/callback.php"
+    };
+
+    PayHero.makeStkPush(paymentDetails)
+      .then(response => console.log(response))
+      .catch(error => console.error(error));
+    }
 
   const formatPhoneNumber = (phone) => {
     let p = phone.toString().replace(/\D/g, "");
@@ -339,7 +365,7 @@ function ServicePayment() {
             <i className="fas fa-info-circle"></i> M-Pesa Payment Process
           </h4>
           <ul>
-            <li>Click "Pay via M-Pesa" below</li>
+            <li>Click "Pay with M-Pesa" below</li>
             <li>Check your phone for M-Pesa prompt</li>
             <li>Enter your M-Pesa PIN to authorize payment of KSh 100</li>
             <li>After successful payment, view your CRB status results</li>
@@ -352,7 +378,7 @@ function ServicePayment() {
           disabled={isProcessing || !userData.phone}
         >
           <i className="fas fa-mobile-alt"></i>
-          {isProcessing ? "Processing..." : "Pay via M-Pesa"}
+          {isProcessing ? "Processing..." : "Pay with M-Pesa"}
         </button>
         
         {!userData.phone && (

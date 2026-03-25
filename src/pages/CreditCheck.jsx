@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-//import "./creditcheck.css";
 import { useNavigate } from "react-router-dom";
+
 
 const CreditCheck = () => {
   const navigate = useNavigate();
@@ -24,6 +24,7 @@ const CreditCheck = () => {
     // Basic validation
     if (!formData.fullName || !formData.idNumber || !formData.phoneNumber || !formData.emailAddress || !formData.crbOption) {
       alert('Please fill in all required fields before checking your credit status.');
+      
       return;
     }
 
@@ -33,6 +34,7 @@ const CreditCheck = () => {
     // Redirect to payment page
     navigate("/service-payment");
   };
+
 
   return (
     <div>
@@ -45,7 +47,7 @@ const CreditCheck = () => {
           </div>
           
           <div className="checker-form">
-            <div className="form-group">
+            <div className="form-group" >
               <label htmlFor="fullName">Full Name *</label>
               <input 
                 type="text" 
@@ -57,7 +59,7 @@ const CreditCheck = () => {
               />
             </div>
             
-            <div className="form-row">
+            <div className="form-row" >
               <div className="form-group">
                 <label htmlFor="idNumber">National ID / Passport Number *</label>
                 <input 
@@ -82,7 +84,7 @@ const CreditCheck = () => {
               </div>
             </div>
             
-            <div className="form-group">
+            <div className="form-group" >
               <label htmlFor="emailAddress">Email Address *</label>
               <input 
                 type="email" 
@@ -94,7 +96,7 @@ const CreditCheck = () => {
               />
             </div>
             
-            <div className="form-group">
+            <div className="form-group" >
               <label htmlFor="crbOption">Select CRB Bureau *</label>
               <select 
                 id="crbOption" 

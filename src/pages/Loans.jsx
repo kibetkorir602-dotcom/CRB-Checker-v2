@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./Loans.css"; // We'll create this CSS file
 
 const Loans = () => {
-```
+
   const [loanAmount, setLoanAmount] = useState(100000);
   const [loanTerm, setLoanTerm] = useState(12);
   const [phoneNumber, setPhoneNumber] = useState("0700 000 000");

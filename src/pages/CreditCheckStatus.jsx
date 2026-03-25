@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-//import "./creditcheck.css";
 import { useNavigate } from "react-router-dom";
 
 const CreditCheckStatus = () => {

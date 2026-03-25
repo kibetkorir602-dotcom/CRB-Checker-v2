@@ -1,7 +1,6 @@
 import React from "react";
-import './Home.css'
 import { useNavigate } from "react-router-dom";
-import Banner from '../../assets/banner.png'
+import Banner from '../assets/banner.png'
 
 function Home() {
   const navigator = useNavigate();

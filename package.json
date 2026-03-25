@@ -10,8 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@kibetkorir/react-codespear-payment": "^1.0.0",
+    "payhero-devkit": "^1.1.1",
+    "payhero-wrapper": "^1.0.21",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-popup-widget": "^1.0.0",
     "react-router-dom": "^7.11.0",
     "sweetalert2": "^11.26.17"
   },
