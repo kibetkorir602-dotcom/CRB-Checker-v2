@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
+import './Loan.css'
 
 function LoanApplication() {
   const navigate = useNavigate();
@@ -15,14 +16,9 @@ function LoanApplication() {
   const PAYHERO_API_BASE = 'https://backend.payhero.co.ke/api/v2';
   const AUTH_TOKEN = 'Basic bnhvR1cxSVZqMFVoVVNHMmtTc3A6czFmcFF0NFRJa0lreFowYXZVWjdkRDRkdHJKeUtRaUxldjdoVVZVTw==';//cmxZdTh4dGtTUG1EZVZTa1JXZDQ6UndETHdMcmd4Z3lVRmtKYXlzS09UNjNYS1Bvemh0T0xXZ09IOGgwOA==';
 
-  // Your payment channel IDs from the console output
-  const CHANNELS = {
-    COOP_BANK: 3123,      // Co-operative Bank channel
-    SASAPAY_WALLET: 4201   // SASAPAY WALLET channel
-  };
   
   // Use the SASAPAY wallet for M-Pesa STK Push
-  const CHANNEL_ID = CHANNELS.COOP_BANK;
+  const CHANNEL_ID = 6415;
 
   // Loan options data
   const loanOptions = [
@@ -336,7 +332,7 @@ const pollTransactionStatus = (reference, loan, phone) => {
           body: JSON.stringify({
             amount: amount,
             phone_number: formattedPhone, // Send in format 07XXXXXXXX
-            channel_id: 3123,
+            channel_id: 6415,
             provider: 'm-pesa',
             //external_reference: externalReference,
             //customer_name: userData.name || 'Customer'

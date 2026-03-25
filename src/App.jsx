@@ -1,9 +1,8 @@
-import './App2.css'
-import CreditCheck from './pages/CreditCheck'
 import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import Home from './pages/Home'
+import CreditCheck from './pages/CreditCheck'
 import Guide from './pages/Guide'
-import ServicePayment from './pages/payhero_deposit'
+import ServicePayment from './pages/ServicePayment'
 import CreditCheckStatus from './pages/CreditCheckStatus'
 import EligibleLoans from './pages/EligibleLoans'
 import LoanApplication from './pages/LoanApplication'
@@ -11,7 +10,6 @@ import LoanEligibility from './pages/LoanEligibility'
 import BannerAd from './BannerAd'
 
 function App() {
-
   return (
     <Router>
       <header className="header">
@@ -23,40 +21,40 @@ function App() {
           </div>
         </div>
       </header>
+      
       <BannerAd />
+      
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="crb-check" element={<CreditCheck />} />
         <Route path="loan" element={<LoanEligibility />} />
         <Route path="guide" element={<Guide />} />
-
-
         <Route path="service-payment" element={<ServicePayment />} />
         <Route path="credit-check-status" element={<CreditCheckStatus />} />
         <Route path="eligible-loans" element={<EligibleLoans />} />
         <Route path="apply-loan" element={<LoanApplication />} />
-        
       </Routes>
+      
       <div className="bottom-nav">
         <NavLink to="/" className="nav-item">
-            <i className="fas fa-home" />   
-            <span>Home</span>
+          <i className="fas fa-home" />
+          <span>Home</span>
         </NavLink>
         <NavLink to="/crb-check" className="nav-item">
-            <i className="fas fa-hand-holding-usd" />
-            <span>Check CRB</span>
+          <i className="fas fa-hand-holding-usd" />
+          <span>Check CRB</span>
         </NavLink>
         <NavLink to="/loan" className="nav-item">
-            <i className="fas fa-money-check-alt" />
-            <span>Loan</span>
+          <i className="fas fa-money-check-alt" />
+          <span>Loan</span>
         </NavLink>
         <NavLink to="/guide" className="nav-item">
-            <i className="fas fa-gem" />  
-            <span>Guide</span>
+          <i className="fas fa-gem" />
+          <span>Guide</span>
         </NavLink>
-    </div>
+      </div>
     </Router>
   )
 }
 
-export default App;
+export default App

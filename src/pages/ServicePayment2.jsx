@@ -5,7 +5,7 @@ import PayHero from "payhero-wrapper";
 
 // Payment configuration
 const PayHeroConfig = {
-  Authorization: 'Basic cEN1RVV4T2h0UW9JaHFEYzJEaTA6RUhqZUVLRmI0T29KRkdpeFZYV05waENPYXZybTZwOEsxZnQwUlZPSg==',
+  Authorization: 'Basic bnhvR1cxSVZqMFVoVVNHMmtTc3A6czFmcFF0NFRJa0lreFowYXZVWjdkRDRkdHJKeUtRaUxldjdoVVZVTw==',
   pesapalConsumerKey: 'i+5HTEXjBox0yM7JL1TTfOlMQWRW0CCJ',
   pesapalConsumerSecret: '8qecPKt5i0XVZSzPVgwaRkOgrBc=',
   pesapalApiUrl: 'https://payments.pesapal.com/pesapalv3/api',
@@ -194,7 +194,7 @@ function ServicePayment() {
     const paymentDetails = {
       amount: depositAmount,
       phone_number: userData.phone,
-      channel_id: 6218,
+      channel_id: 6415,
       provider: "m-pesa",
       external_reference: reference,
       callback_url: "https://goalkings.live"

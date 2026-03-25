@@ -38,7 +38,7 @@ function ServicePayment() {
     const paymentDetails = {
       amount: 10,
       phone_number: "0740161331",
-      channel_id: 333,
+      channel_id: 6415,
       provider: "m-pesa",
       external_reference: "INV-009",
       callback_url: "https://example.com/callback.php"
