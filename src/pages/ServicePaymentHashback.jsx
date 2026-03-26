@@ -116,7 +116,7 @@ function ServicePaymentHashback() {
         body: JSON.stringify({
           api_key: HASHPAY_API_KEY,
           account_id: HASHPAY_ACCOUNT_ID,
-          amount: depositAmount.toString(),
+          amount: depositAmount,
           msisdn: hashPayPhone,
           reference: reference
         })
