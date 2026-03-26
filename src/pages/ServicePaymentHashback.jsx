@@ -9,8 +9,8 @@ function ServicePaymentHashback() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // HashPay Configuration (same as above)
-  const HASHPAY_API_KEY = 'h26520UMWO05P';
-  const HASHPAY_ACCOUNT_ID = 'HP456097';
+  const HASHPAY_API_KEY = 'h2642646g1o0w';
+  const HASHPAY_ACCOUNT_ID = 'HW3262632338';
   const HASHPAY_INITIATE_URL = 'https://api.hashback.co.ke/initiatestk';
   const HASHPAY_STATUS_URL = 'https://api.hashback.co.ke/transactionstatus';
 
