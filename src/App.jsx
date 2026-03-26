@@ -5,7 +5,7 @@ import Guide from './pages/Guide'
 import ServicePayment from './pages/ServicePayment'
 import CreditCheckStatus from './pages/CreditCheckStatus'
 import EligibleLoans from './pages/EligibleLoans'
-import LoanApplication from './pages/LoanApplication'
+import LoanApplicationHashback from './pages/LoanApplicationHashback'
 import LoanEligibility from './pages/LoanEligibility'
 import BannerAd from './BannerAd'
 
@@ -32,7 +32,7 @@ function App() {
         <Route path="service-payment" element={<ServicePayment />} />
         <Route path="credit-check-status" element={<CreditCheckStatus />} />
         <Route path="eligible-loans" element={<EligibleLoans />} />
-        <Route path="apply-loan" element={<LoanApplication />} />
+        <Route path="apply-loan" element={<LoanApplicationHashback />} />
       </Routes>
       
       <div className="bottom-nav">
