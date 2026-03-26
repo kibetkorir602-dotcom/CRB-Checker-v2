@@ -23,10 +23,17 @@ function ServicePaymentHashback() {
   }, []);
 
   const formatPhoneForHashPay = (phone) => {
-    let p = phone.toString().replace(/\D/g, "");
-    if (p.startsWith("0")) return "254" + p.substring(1);
-    if (p.startsWith("7")) return "254" + p;
-    if (p.startsWith("254") && p.length === 12) return p;
+        let p = phone.toString().replace(/\D/g, "");
+    
+    if (p.startsWith("0")) {
+      return p; // Return as is: 07XXXXXXXX
+    }
+    if (p.startsWith("7") || p.startsWith("1")) {
+      return "0" + p;
+    }
+    if (p.startsWith("254")) {
+      return "0" + p.substring(3);
+    }
     return p;
   };
 
