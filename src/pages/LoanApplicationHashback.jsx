@@ -254,7 +254,7 @@ function ServicePaymentHashback() {
 
   return (
     <section className="checker-section">
-      <div className="container">
+      <div className="containerr">
         <div className="section-title">
           <h2>Service Fee Payment</h2>
           <p>Complete the payment to view your CRB status report</p>
@@ -301,31 +301,6 @@ function ServicePaymentHashback() {
             </div>
           )}
 
-          <div className="mpesa-info">
-            <h4>
-              <i className="fas fa-info-circle"></i> How to Complete Payment
-            </h4>
-            <ul>
-              <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
-              <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
-              <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
-              <li><i className="fas fa-4"></i> Wait for confirmation and view your results</li>
-            </ul>
-          </div>
-
-          <div style={{ 
-            background: '#fff8e1', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            margin: '20px 0',
-            textAlign: 'center'
-          }}>
-            <i className="fas fa-shield-alt" style={{ color: '#f39c12', marginRight: '8px' }}></i>
-            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
-              Your payment is secured and encrypted via HashPay. We value your privacy.
-            </span>
-          </div>
-
           <button
             className="deposit-btn"
             onClick={handlePayment}
@@ -338,6 +313,31 @@ function ServicePaymentHashback() {
             <i className={`fas ${isProcessing ? 'fa-spinner fa-spin' : 'fa-mobile-alt'}`}></i>
             {isProcessing ? "Processing..." : "Pay with M-Pesa via HashPay"}
           </button>
+
+          <div className="mpesa-info">
+            <h4>
+              <i className="fas fa-info-circle"></i> How to Complete Payment
+            </h4>
+            <ul>
+              <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
+              <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
+              <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
+              <li><i className="fas fa-4"></i> Wait for confirmation and view your results</li>
+            </ul>
+          </div>
+
+          <div style={{ ]
+            background: '#fff8e1', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            margin: '15px 0',
+            textAlign: 'center'
+          }}>
+            <i className="fas fa-shield-alt" style={{ color: '#f39c12', marginRight: '8px' }}></i>
+            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
+              Your payment is secured and encrypted. We value your privacy.
+            </span>
+          </div>
           
           {!userData.phone && (
             <div style={{ 
@@ -375,11 +375,11 @@ function ServicePaymentHashback() {
         
         .deposit-card {
           animation: fadeInUp 0.5s ease-out;
-          max-width: 500px;
+          max-width: 700px;
           margin: 0 auto;
           background: white;
           border-radius: 20px;
-          padding: 30px;
+          padding: 12px;
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
         
@@ -395,18 +395,18 @@ function ServicePaymentHashback() {
         }
         
         .deposit-title {
-          font-size: 1.3rem;
-          font-weight: 700;
+          font-size: 1.2rem;
+          font-weight: 600;
           text-align: center;
-          margin-bottom: 25px;
+          margin-bottom: 15px;
           color: #333;
         }
         
         .mpesa-info {
           background: #f8f9fa;
-          padding: 20px;
+          padding: 12px;
           border-radius: 12px;
-          margin: 20px 0;
+          margin: 15px 0;
         }
         
         .mpesa-info h4 {
