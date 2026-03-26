@@ -1544,7 +1544,16 @@ footer {
 
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 992px) {
+.section-title {
+  margin-bottom: 15px;
+}
 
+.section-title h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+  
   .hero-content,
   .calculator-content,
   .explanation-content {
@@ -1971,6 +1980,14 @@ footer {
 }
 
 @media (max-width: 480px) {
+  .section-title {
+  margin-bottom: 12px;
+}
+
+.section-title h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
   .loan-application-container {
     padding: 12px;
   }
