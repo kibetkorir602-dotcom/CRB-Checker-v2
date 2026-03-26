@@ -1,473 +1,475 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
-import './Loan.css'
 
-function LoanApplicationHashback() {
+function ServicePaymentHashback() {
   const navigate = useNavigate();
-  const [userData, setUserData] = useState({
-    name: "",
-    phone_number: "",
-  });
-  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [userData, setUserData] = useState({ phone: "" });
+  const [depositAmount] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // HashPay API endpoint (your PHP backend)
-  const HASHPAY_API_ENDPOINT = '/api/hashpay_stk.php'; // Update with your actual endpoint path
-
-  // Loan options data
-  const loanOptions = [
-    { amount: 5500, fee: 100 },
-    { amount: 6800, fee: 130 },
-    { amount: 7800, fee: 170 },
-    { amount: 9800, fee: 190 },
-    { amount: 11200, fee: 230 },
-    { amount: 16800, fee: 250 },
-    { amount: 21200, fee: 270 },
-    { amount: 25600, fee: 400 },
-    { amount: 30000, fee: 470 },
-    { amount: 35400, fee: 590 },
-    { amount: 39800, fee: 730 },
-    { amount: 44200, fee: 1010 },
-    { amount: 48600, fee: 1600 },
-    { amount: 60600, fee: 2050 },
-  ];
+  // HashPay Configuration
+  const HASHPAY_API_KEY = 'h26520UMWO05P';
+  const HASHPAY_ACCOUNT_ID = 'HP456097';
+  const HASHPAY_INITIATE_URL = 'https://api.hashback.co.ke/initiatestk';
+  const HASHPAY_STATUS_URL = 'https://api.hashback.co.ke/transactionstatus';
 
   useEffect(() => {
-    // Load user data from localStorage or sessionStorage
-    const storedData = localStorage.getItem("crbCheckData");
+    const storedData = localStorage.getItem('crbCheckData');
     if (storedData) {
       const formData = JSON.parse(storedData);
-      setUserData({
-        name: formData.fullName || "Customer",
-        phone_number: formData.phoneNumber || "",
-      });
-    }
-
-    // Check for session storage data
-    const sessionData = JSON.parse(sessionStorage.getItem("myLoan") || "{}");
-    if (sessionData.phone_number) {
-      setUserData((prev) => ({
-        ...prev,
-        name: sessionData.name || prev.name,
-        phone_number: sessionData.phone_number || prev.phone_number,
-      }));
+      setUserData(prev => ({ ...prev, phone: formData.phoneNumber || "" }));
     }
   }, []);
 
-  /**
-   * Format phone number to HashPay required format (254XXXXXXXX)
-   * @param {string} phone - Raw phone number input
-   * @returns {string} Formatted phone number for HashPay API
-   */
+  // CORRECTED: Format phone number to 07XXXXXXXX format (what HashPay expects)
   const formatPhoneForHashPay = (phone) => {
-    // Remove all non-digit characters
     let p = phone.toString().replace(/\D/g, "");
     
-    // If it starts with 0, convert to 254 format
     if (p.startsWith("0")) {
-      return "254" + p.substring(1);
+      return p; // Return as is: 07XXXXXXXX
     }
-    
-    // If it starts with 7, add 254 prefix
-    if (p.startsWith("7")) {
-      return "254" + p;
+    if (p.startsWith("7") || p.startsWith("1")) {
+      return "0" + p;
     }
-    
-    // If it already starts with 254, return as is
-    if (p.startsWith("254") && p.length === 12) {
-      return p;
-    }
-    
-    // Default fallback: assume it's 07 format missing the 0
-    if (p.length === 9) {
-      return "2547" + p;
-    }
-    
-    return p;
-  };
-
-  /**
-   * Display user-friendly phone number for display (07XXXXXXXX)
-   * @param {string} phone - Phone number in any format
-   * @returns {string} Formatted phone number for display
-   */
-  const formatPhoneForDisplay = (phone) => {
-    let p = phone.toString().replace(/\D/g, "");
     if (p.startsWith("254")) {
       return "0" + p.substring(3);
     }
-    if (p.startsWith("0")) {
-      return p;
-    }
-    if (p.startsWith("7")) {
-      return "0" + p;
-    }
     return p;
   };
 
-  /**
-   * Poll transaction status by checking with your backend
-   * Since HashPay sends webhook callbacks, we'll check with your backend status endpoint
-   * @param {string} reference - Transaction reference
-   * @param {object} loan - Selected loan details
-   * @param {string} phone - Formatted phone number
-   */
-  const pollTransactionStatus = (reference, loan, phone) => {
+  const formatPhoneForDisplay = (phone) => {
+    let p = phone.toString().replace(/\D/g, "");
+    if (p.startsWith("254")) return "0" + p.substring(3);
+    if (p.startsWith("0")) return p;
+    if (p.startsWith("7")) return "0" + p;
+    return p;
+  };
+
+  const checkTransactionStatus = async (checkoutId) => {
+    try {
+      const response = await fetch(HASHPAY_STATUS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: HASHPAY_API_KEY,
+          account_id: HASHPAY_ACCOUNT_ID,
+          checkoutid: checkoutId
+        })
+      });
+      const data = await response.json();
+      console.log('Status check response:', data);
+      // Check if ResultCode is "0" meaning success
+      return data.ResultCode === "0";
+    } catch (error) {
+      console.error('Status check error:', error);
+      return false;
+    }
+  };
+
+  const pollTransactionStatus = (checkoutId, amount, phone) => {
     let attempts = 0;
-    const maxAttempts = 30; // 30 attempts * 5 seconds = 2.5 minutes max
-    let pollInterval;
+    const maxAttempts = 30; // 2.5 minutes
+    let interval;
 
     const checkStatus = async () => {
+      attempts++;
+      console.log(`Polling attempt ${attempts}/${maxAttempts}`);
+      
       if (attempts >= maxAttempts) {
-        clearInterval(pollInterval);
-        Swal.fire({
-          title: "Payment Timeout",
-          html: "⏰ Payment monitoring timeout. Please check your transaction history or contact support.",
-          icon: "warning",
-          confirmButtonText: "OK",
+        clearInterval(interval);
+        Swal.fire({ 
+          title: "Timeout", 
+          text: "Payment confirmation timed out. Please check your M-Pesa transaction history.", 
+          icon: "warning" 
         });
+        setIsProcessing(false);
         return;
       }
-
-      attempts++;
-
-      try {
-        // Check transaction status with your backend
-        const response = await fetch(`${HASHPAY_API_ENDPOINT}?action=status&reference=${reference}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        const statusData = await response.json();
-        
-        // Check if payment was successful
-        if (statusData.success && statusData.status === "COMPLETED") {
-          clearInterval(pollInterval);
-          showSuccessMessage(loan, phone, reference);
-          return;
-        }
-        
-        // If payment failed
-        if (statusData.status === "FAILED" || statusData.status === "CANCELLED") {
-          clearInterval(pollInterval);
-          Swal.fire({
-            title: "Payment Failed",
-            html: `❌ The payment was not completed. ${statusData.message || "Please try again."}`,
-            icon: "error",
-            confirmButtonText: "OK",
-          });
-          return;
-        }
-        
-        // If still PENDING, continue polling
-        console.log(`Payment status: ${statusData.status || 'PENDING'}, attempt ${attempts}/${maxAttempts}`);
-        
-      } catch (error) {
-        console.log('Polling attempt', attempts, 'failed, continuing...');
-        // Continue polling - don't show error to user
+      
+      const isSuccess = await checkTransactionStatus(checkoutId);
+      if (isSuccess) {
+        clearInterval(interval);
+        localStorage.setItem('crbPaymentVerified', 'true');
+        Swal.fire({
+          title: "Payment Successful! 🎉",
+          html: `<div style="text-align: center;">
+            <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
+            <h3 style="margin: 15px 0;">KSh ${amount} Paid</h3>
+            <p>Service fee payment completed successfully</p>
+          </div>`,
+          icon: "success",
+          confirmButtonText: "View Results",
+        }).then(() => navigate("/credit-check-status"));
       }
     };
 
-    // Check every 5 seconds
-    pollInterval = setInterval(checkStatus, 5000);
+    interval = setInterval(checkStatus, 5000);
+    return interval;
+  };
+
+  const handlePayment = async () => {
+    if (!userData.phone) {
+      Swal.fire({ 
+        title: "Phone Required", 
+        text: "Please complete CRB check first.", 
+        icon: "warning" 
+      });
+      return;
+    }
+
+    const displayPhone = formatPhoneForDisplay(userData.phone);
+    const hashPayPhone = formatPhoneForHashPay(userData.phone);
     
-    // Return interval ID in case we need to clear it
-    return pollInterval;
-  };
-
-  /**
-   * Show success message after payment confirmation
-   */
-  const showSuccessMessage = (loan, phone, reference) => {
-    Swal.fire({
-      title: "Payment Successful! 🎉",
-      html: `
-        <div style="text-align: center;">
-          <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
-          <h3 style="margin: 15px 0; color: #10b981;">Payment Completed</h3>
-          <div style="background: #f9fafb; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-              <span>Loan Amount:</span>
-              <strong>Ksh ${loan.amount.toLocaleString()}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-              <span>Processing Fee:</span>
-              <strong>Ksh ${loan.fee}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Phone Number:</span>
-              <strong>${phone}</strong>
-            </div>
-          </div>
-          <p style="color: #6b7280; margin: 15px 0;">
-            Your loan application is now being processed. You'll receive funds shortly.
-          </p>
-          <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">
-            Reference: ${reference}
-          </p>
-        </div>
-      `,
-      icon: "success",
-      confirmButtonText: "Continue",
-    }).then(() => {
-      // Navigate to home or dashboard
-      navigate("/");
+    console.log('Phone formatting:', {
+      original: userData.phone,
+      display: displayPhone,
+      hashpay: hashPayPhone
     });
-  };
-
-  const handleLoanSelection = (loan) => {
-    setSelectedLoan(loan);
-    // Hide error message when loan is selected
-    const errorMessage = document.getElementById("error-message");
-    if (errorMessage) {
-      errorMessage.style.display = "none";
-    }
-
-    // Update session storage
-    const updatedData = {
-      ...userData,
-      loan_amount: loan.amount,
-      processing_fee: loan.fee,
-    };
-    sessionStorage.setItem("myLoan", JSON.stringify(updatedData));
-  };
-
-  const handleApply = async () => {
-    if (!selectedLoan) {
-      const errorMessage = document.getElementById("error-message");
-      if (errorMessage) {
-        errorMessage.style.display = "block";
-      }
-      return;
-    }
-
-    if (!userData.phone_number) {
-      Swal.fire({
-        title: "Phone Number Required",
-        text: "Please complete the CRB check first to provide your phone number",
-        icon: "warning",
+    
+    // Validate phone format (should be 07XXXXXXXX - 10 digits starting with 0)
+    if (!hashPayPhone.match(/^07[0-9]{8}$/)) {
+      Swal.fire({ 
+        title: "Invalid Phone Number", 
+        text: `Phone number "${displayPhone}" is invalid. Must be a valid Kenyan number (e.g., 0712345678).`, 
+        icon: "error" 
       });
       return;
     }
 
-    // Format phone for display in confirmation
-    const displayPhone = formatPhoneForDisplay(userData.phone_number);
-    const hashPayPhone = formatPhoneForHashPay(userData.phone_number);
-
-    // Validate phone number format for HashPay
-    if (!hashPayPhone.match(/^254[0-9]{9}$/)) {
-      Swal.fire({
-        title: "Invalid Phone Number",
-        text: "Please ensure your phone number is correct (e.g., 07XXXXXXXX or 2547XXXXXXXX)",
-        icon: "error",
-      });
-      return;
-    }
-
-    // Confirm loan application modal
-    const { value: confirmed } = await Swal.fire({
-      title: "Confirm Loan Application",
+    // Confirmation modal
+    const confirmed = await Swal.fire({
+      title: "Confirm Service Fee Payment",
       html: `
         <div style="text-align: center;">
-          <div style="background: linear-gradient(135deg, #006600 0%, #004d00 100%); padding: 18px; border-radius: 16px 16px 0 0; color: white; margin: -20px -20px 20px -20px;">
-            <div style="font-size: 36px; margin-bottom: 8px;"><i class="fas fa-check-circle"></i></div>
-            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">Confirm Loan</div>
-            <div style="font-size: 0.8rem; opacity: 0.9;">Review details before payment</div>
+          <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 18px; border-radius: 16px 16px 0 0; color: white; margin: -20px -20px 20px -20px;">
+            <div style="font-size: 36px; margin-bottom: 8px;"><i class="fas fa-credit-card"></i></div>
+            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">Payment Details</div>
           </div>
           
           <div style="background: #f8f9ff; border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: left;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 102, 0, 0.1);">
-              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Loan Amount:</span>
-              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${selectedLoan.amount.toLocaleString()}</span>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(5, 150, 105, 0.1);">
+              <span style="color: #666;">Service Fee:</span>
+              <span style="color: #059669; font-weight: 700;">KSh ${depositAmount}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 102, 0, 0.1);">
-              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Processing Fee:</span>
-              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${selectedLoan.fee}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Total Repayment:</span>
-              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${(selectedLoan.amount * 1.1).toLocaleString()}</span>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #666;">Phone Number:</span>
+              <span style="color: #059669; font-weight: 600;">${displayPhone}</span>
             </div>
           </div>
           
-          <div style="background: rgba(0, 102, 0, 0.08); padding: 12px; border-radius: 8px; margin: 14px 0; font-weight: 600; color: #10b981; border: 1px solid rgba(0, 102, 0, 0.15); font-size: 0.85rem;">
-            <i class="fas fa-mobile-alt"></i> ${displayPhone}
+          <div style="background: rgba(5, 150, 105, 0.1); padding: 12px; border-radius: 8px; margin: 14px 0;">
+            <i class="fas fa-info-circle" style="color: #059669; margin-right: 8px;"></i>
+            <span style="font-size: 0.85rem; color: #059669;">This payment is required to view your CRB status results</span>
           </div>
-          
-          <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
-            Click "Proceed to M-Pesa" to pay the processing fee of <strong>Ksh ${selectedLoan.fee}</strong> and complete your loan application.
-          </p>
         </div>
       `,
       icon: "info",
       showCancelButton: true,
       confirmButtonText: "Proceed to M-Pesa",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#006600",
+      confirmButtonColor: "#059669",
       cancelButtonColor: "#6c757d",
       reverseButtons: true,
       focusConfirm: false,
       showCloseButton: true,
     });
+    
+    if (!confirmed.isConfirmed) return;
 
-    // Process Payment if Confirmed
-    if (confirmed) {
-      Swal.fire({
-        title: "Initiating Payment",
-        html: "Connecting to M-Pesa via HashPay...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
+    Swal.fire({ 
+      title: "Initiating Payment", 
+      text: "Connecting to M-Pesa...", 
+      allowOutsideClick: false, 
+      didOpen: () => Swal.showLoading() 
+    });
+    setIsProcessing(true);
+
+    try {
+      const reference = `CRB-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      
+      const response = await fetch(HASHPAY_INITIATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: HASHPAY_API_KEY,
+          account_id: HASHPAY_ACCOUNT_ID,
+          amount: depositAmount.toString(),
+          msisdn: hashPayPhone, // Now in 07XXXXXXXX format
+          reference: reference
+        })
       });
 
-      setIsProcessing(true);
+      const data = await response.json();
+      console.log('HashPay response:', data);
 
-      try {
-        const processingFee = selectedLoan.fee;
+      if (data.success && data.checkout_id) {
+        Swal.close();
         
-        console.log('Initiating HashPay payment:', {
-          amount: processingFee,
-          phone: hashPayPhone,
-          loanAmount: selectedLoan.amount,
-          loanType: selectedLoan.type || 'standard'
-        });
-
-        // Initiate STK Push using HashPay PHP backend
-        const response = await fetch(HASHPAY_API_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            phoneNumber: userData.phone_number, // Send raw phone, backend will format
-            amount: processingFee,
-            loanAmount: selectedLoan.amount,
-            loanType: selectedLoan.type || 'standard',
-            account_reference: `LOAN-${Date.now()}`,
-            transaction_desc: `Loan processing fee for Ksh ${selectedLoan.amount.toLocaleString()}`
-          })
-        });
-
-        const data = await response.json();
-        console.log('HashPay API response:', data);
-
-        if (data.success) {
-          // Close the loading modal
-          Swal.close();
-          
-          // Show authorization message
-          Swal.fire({
-            title: "Check Your Phone",
-            html: `
-              <div style="text-align: center;">
-                <i class="fas fa-mobile-alt" style="font-size: 48px; color: #065f46;"></i>
-                <h3 style="margin: 15px 0;">Enter M-Pesa PIN</h3>
-                <p>Check your phone to authorize payment of <strong>Ksh ${processingFee}</strong></p>
-                <p><small>Phone: ${displayPhone}</small></p>
-                <p style="color: #666; font-size: 0.9rem; margin-top: 15px;">
-                  ✅ Payment request sent. Please check your phone and enter your M-Pesa PIN.
-                </p>
-                <p style="font-size: 0.8rem; color: #888; margin-top: 10px;">
-                  Reference: ${data.reference}
+        Swal.fire({
+          title: "Check Your Phone",
+          html: `
+            <div style="text-align: center;">
+              <i class="fas fa-mobile-alt" style="font-size: 48px; color: #065f46;"></i>
+              <h3 style="margin: 15px 0;">Enter M-Pesa PIN</h3>
+              <p>Check your phone to authorize payment of <strong>KSh ${depositAmount}</strong></p>
+              <p style="margin-top: 10px;"><small>Phone: ${displayPhone}</small></p>
+              <div style="background: #f8f9ff; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                <p style="font-size: 0.8rem; margin: 0; color: #666;">
+                  Reference: ${reference}
                 </p>
               </div>
-            `,
-            icon: "info",
-            confirmButtonText: "I've Completed Payment",
-            showCancelButton: true,
-            cancelButtonText: "Cancel",
-          }).then((result) => {
-            if (result.isConfirmed) {
-              // Start polling for transaction status
-              pollTransactionStatus(data.reference, selectedLoan, displayPhone);
-            } else {
-              Swal.fire({
-                title: "Payment Cancelled",
-                text: "You cancelled the payment process. You can try again when ready.",
-                icon: "info",
-                confirmButtonText: "OK",
-              });
-            }
-          });
-        } else {
-          throw new Error(data.error || data.message || "Payment initialization failed");
-        }
-      } catch (error) {
-        console.error('HashPay payment error:', error);
-        Swal.fire({
-          title: "Payment Failed",
-          html: `
-            <p style="font-size: 0.9rem;">${error.message || "Unable to process payment. Please try again."}</p>
-            <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">
-              Ensure your phone number is correct and you have sufficient M-Pesa balance.
-            </p>
-            <p style="font-size: 0.7rem; color: #999; margin-top: 5px;">
-              If the issue persists, please contact support.
-            </p>
+            </div>
           `,
-          icon: "error",
-          confirmButtonText: "Try Again",
+          icon: "info",
+          confirmButtonText: "I've Completed Payment",
+          showCancelButton: true,
+          cancelButtonText: "Cancel",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Start polling for payment status
+            pollTransactionStatus(data.checkout_id, depositAmount, displayPhone);
+          } else {
+            setIsProcessing(false);
+            Swal.fire({
+              title: "Payment Cancelled",
+              text: "You can complete the payment from your M-Pesa app.",
+              icon: "info"
+            });
+          }
         });
-      } finally {
-        setIsProcessing(false);
+      } else {
+        throw new Error(data.message || "Initiation failed");
       }
+    } catch (error) {
+      console.error('Payment error:', error);
+      Swal.fire({ 
+        title: "Payment Failed", 
+        text: error.message || "Unable to initiate payment. Please try again.", 
+        icon: "error" 
+      });
+      setIsProcessing(false);
     }
   };
 
   return (
-    <div className="loan-application-container">
-      <div className="welcome-card">
-        <p className="welcome-text">
-          Hi <span className="user-name">{userData.name || "Customer"}</span>,
-          you qualify for these loan options based on your{" "}
-          <strong>credit records</strong>.
-        </p>
-      </div>
+    <section className="checker-section">
+      <div className="container">
+        <div className="section-title">
+          <h2>Service Fee Payment</h2>
+          <p>Complete the payment to view your CRB status report</p>
+        </div>
+        
+        <div className="deposit-card">
+          <div className="deposit-title">
+            <i className="fas fa-lock" style={{ marginRight: '8px' }}></i>
+            Secure Payment via HashPay
+          </div>
 
-      <div className="loan-card">
-        <h3 className="card-title">Select Your Loan Amount</h3>
-
-        <div className="loan-grid">
-          {loanOptions.map((loan, index) => (
-            <div
-              key={index}
-              className={`loan-option ${selectedLoan?.amount === loan.amount ? "selected" : ""}`}
-              onClick={() => handleLoanSelection(loan)}
-            >
-              <div className="loan-amount">
-                Ksh {loan.amount.toLocaleString()}
-              </div>
-              <div className="processing-fee">Fee: Ksh {loan.fee}</div>
+          <div className="amount-input" style={{ marginBottom: '25px' }}>
+            <label style={{ display: 'block', fontWeight: '600', marginBottom: '10px', color: '#333' }}>
+              Service Fee Amount
+            </label>
+            <div style={{ 
+              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+              padding: '20px',
+              borderRadius: '12px',
+              textAlign: 'center'
+            }}>
+              <span style={{ fontSize: '32px', fontWeight: '800', color: '#059669' }}>
+                KSh {depositAmount.toLocaleString()}
+              </span>
             </div>
-          ))}
+          </div>
+
+          {userData.phone && (
+            <div className="phone-info" style={{ 
+              background: '#e8f5e9',
+              padding: '15px',
+              borderRadius: '10px',
+              margin: '20px 0',
+              textAlign: 'center',
+              borderLeft: '4px solid #059669'
+            }}>
+              <p style={{ margin: 0 }}>
+                <i className="fas fa-mobile-alt" style={{ marginRight: '8px', color: '#059669' }}></i>
+                <strong>Phone Number:</strong> {formatPhoneForDisplay(userData.phone)}
+              </p>
+              <p style={{ fontSize: '0.85rem', color: '#666', margin: '8px 0 0 0' }}>
+                M-Pesa payment will be sent to this number
+              </p>
+            </div>
+          )}
+
+          <div className="mpesa-info">
+            <h4>
+              <i className="fas fa-info-circle"></i> How to Complete Payment
+            </h4>
+            <ul>
+              <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
+              <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
+              <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
+              <li><i className="fas fa-4"></i> Wait for confirmation and view your results</li>
+            </ul>
+          </div>
+
+          <div style={{ 
+            background: '#fff8e1', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            margin: '20px 0',
+            textAlign: 'center'
+          }}>
+            <i className="fas fa-shield-alt" style={{ color: '#f39c12', marginRight: '8px' }}></i>
+            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
+              Your payment is secured and encrypted via HashPay. We value your privacy.
+            </span>
+          </div>
+
+          <button
+            className="deposit-btn"
+            onClick={handlePayment}
+            disabled={isProcessing || !userData.phone}
+            style={{
+              background: isProcessing ? '#9ca3af' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+              cursor: (isProcessing || !userData.phone) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <i className={`fas ${isProcessing ? 'fa-spinner fa-spin' : 'fa-mobile-alt'}`}></i>
+            {isProcessing ? "Processing..." : "Pay with M-Pesa via HashPay"}
+          </button>
+          
+          {!userData.phone && (
+            <div style={{ 
+              color: '#dc3545', 
+              textAlign: 'center', 
+              marginTop: '15px', 
+              fontSize: '0.9rem',
+              padding: '12px',
+              background: '#f8d7da',
+              borderRadius: '8px'
+            }}>
+              <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
+              Please complete the CRB check form first to provide your phone number
+            </div>
+          )}
+
+          <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => navigate("/crb-check")}
+              style={{ fontSize: '0.9rem', padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              <i className="fas fa-arrow-left"></i> Back to CRB Check
+            </button>
+          </div>
         </div>
       </div>
 
-      <button
-        id="apply-btn"
-        className="btn-apply"
-        onClick={handleApply}
-        disabled={isProcessing || !selectedLoan}
-      >
-        {isProcessing ? "Processing..." : "Get Loan Now"}{" "}
-        <i className="fas fa-arrow-right"></i>
-      </button>
-
-      <div
-        id="error-message"
-        className="error-message"
-        style={{ display: "none" }}
-      >
-        Please select a loan amount to continue
-      </div>
-
-      <a href="/" className="back-link">
-        <i className="fas fa-arrow-left"></i> Back to Home
-      </a>
-    </div>
+      <style>{`
+        .amount-input label {
+          font-weight: 600;
+          margin-bottom: 10px;
+          color: var(--dark);
+        }
+        
+        .deposit-card {
+          animation: fadeInUp 0.5s ease-out;
+          max-width: 500px;
+          margin: 0 auto;
+          background: white;
+          border-radius: 20px;
+          padding: 30px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .deposit-title {
+          font-size: 1.3rem;
+          font-weight: 700;
+          text-align: center;
+          margin-bottom: 25px;
+          color: #333;
+        }
+        
+        .mpesa-info {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 12px;
+          margin: 20px 0;
+        }
+        
+        .mpesa-info h4 {
+          margin-bottom: 15px;
+          color: #333;
+          font-size: 1rem;
+        }
+        
+        .mpesa-info ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        
+        .mpesa-info ul li {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 10px;
+          font-size: 0.9rem;
+          color: #555;
+        }
+        
+        .mpesa-info ul li i {
+          width: 24px;
+          height: 24px;
+          background: #e8f5e9;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #059669;
+          font-size: 0.8rem;
+          font-style: normal;
+        }
+        
+        .deposit-btn {
+          width: 100%;
+          padding: 15px;
+          border: none;
+          border-radius: 12px;
+          font-size: 1rem;
+          font-weight: 600;
+          color: white;
+          cursor: pointer;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .deposit-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(5, 150, 105, 0.3);
+        }
+        
+        .deposit-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+        
+        .btn-secondary:hover {
+          opacity: 0.9;
+        }
+      `}</style>
+    </section>
   );
 }
 
-export default LoanApplicationHashback;
+export default ServicePaymentHashback;
