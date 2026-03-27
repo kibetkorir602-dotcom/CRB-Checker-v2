@@ -211,11 +211,10 @@ function ServicePaymentHashback() {
       const data = await response.json();
       console.log('Initiation response:', data);
       
-      if (data.success && data.checkoutId) {
+      if (data.success/* && data.checkoutId*/) {
         currentCheckoutIdRef.current = data.checkoutId;
-        
         // Register with WebSocket if available
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        /if (data.checkoutId && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'register',
             checkoutId: data.checkoutId
@@ -273,7 +272,7 @@ function ServicePaymentHashback() {
         });
       } else {
         console.error('Initiation response:', data);
-        throw new Error(data.error || data.message || "Initiation failed");
+        //throw new Error(data.error || data.message || "Initiation failed");
       }
     } catch (error) {
       console.error('Payment error:', error);
