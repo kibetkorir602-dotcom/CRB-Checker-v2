@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 
@@ -7,12 +7,13 @@ function ServicePaymentHashback() {
   const [userData, setUserData] = useState({ phone: "" });
   const [depositAmount] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const wsRef = useRef(null);
+  const currentCheckoutIdRef = useRef(null);
+  const statusCheckIntervalRef = useRef(null);
 
-  // HashPay Configuration (same as above)
-  const HASHPAY_API_KEY = 'h26520UMWO05P';
-  const HASHPAY_ACCOUNT_ID = 'HP456097';
-  const HASHPAY_INITIATE_URL = 'https://api.hashback.co.ke/initiatestk';
-  const HASHPAY_STATUS_URL = 'https://api.hashback.co.ke/transactionstatus';
+  // Use your published backend URL with proper protocol
+  const BACKEND_URL = 'https://hash-back-server-production.up.railway.app'; // Add https://
 
   useEffect(() => {
     const storedData = localStorage.getItem('crbCheckData');
@@ -20,13 +21,57 @@ function ServicePaymentHashback() {
       const formData = JSON.parse(storedData);
       setUserData(prev => ({ ...prev, phone: formData.phoneNumber || "" }));
     }
+    
+    // Try WebSocket connection (if your backend supports it)
+    setupWebSocket();
+    
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (statusCheckIntervalRef.current) {
+        clearInterval(statusCheckIntervalRef.current);
+      }
+    };
   }, []);
 
+  const setupWebSocket = () => {
+    // Use wss:// for secure WebSocket (if your backend supports it)
+    // For Railway, WebSocket might not work if not configured
+    try {
+      wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
+      
+      wsRef.current.onopen = () => {
+        console.log('WebSocket connected');
+      };
+      
+      wsRef.current.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('WebSocket message:', message);
+        
+        if (message.type === 'payment_completed') {
+          handlePaymentSuccess(message.data);
+        }
+      };
+      
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // WebSocket might not be supported, fall back to polling
+      };
+      
+      wsRef.current.onclose = () => {
+        console.log('WebSocket disconnected');
+      };
+    } catch (error) {
+      console.log('WebSocket not supported, using polling fallback');
+    }
+  };
+
   const formatPhoneForHashPay = (phone) => {
-        let p = phone.toString().replace(/\D/g, "");
+    let p = phone.toString().replace(/\D/g, "");
     
     if (p.startsWith("0")) {
-      return p; // Return as is: 07XXXXXXXX
+      return p;
     }
     if (p.startsWith("7") || p.startsWith("1")) {
       return "0" + p;
@@ -45,124 +90,204 @@ function ServicePaymentHashback() {
     return p;
   };
 
-  const checkTransactionStatus = async (checkoutId) => {
-    try {
-      const response = await fetch(HASHPAY_STATUS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: HASHPAY_API_KEY,
-          account_id: HASHPAY_ACCOUNT_ID,
-          checkoutid: checkoutId
-        })
-      });
-      const data = await response.json();
-      return data.ResultCode === "0";
-    } catch (error) {
-      console.error('Status check error:', error);
-      return false;
+  const handlePaymentSuccess = (data) => {
+    setPaymentStatus('success');
+    setIsProcessing(false);
+    
+    if (statusCheckIntervalRef.current) {
+      clearInterval(statusCheckIntervalRef.current);
     }
+    
+    localStorage.setItem('crbPaymentVerified', 'true');
+    localStorage.setItem('paymentTransactionId', data.transactionId);
+    
+    Swal.fire({
+      title: "Payment Successful! 🎉",
+      html: `<div>KSh ${data.amount} paid successfully</div>
+             <div>Transaction ID: ${data.transactionId}</div>`,
+      icon: "success",
+      confirmButtonText: "View Results",
+    }).then(() => navigate("/credit-check-status"));
   };
 
-  const pollTransactionStatus = (checkoutId, amount, phone) => {
-    let attempts = 0;
-    const maxAttempts = 30;
-    const interval = setInterval(async () => {
-      attempts++;
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        Swal.fire({ title: "Timeout", text: "Payment confirmation timed out.", icon: "warning" });
-        setIsProcessing(false);
-        return;
-      }
-      const isSuccess = await checkTransactionStatus(checkoutId);
-      if (isSuccess) {
-        clearInterval(interval);
-        localStorage.setItem('crbPaymentVerified', 'true');
+  const checkPaymentStatus = async (checkoutId) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkoutId })
+      });
+      
+      const data = await response.json();
+      console.log('Status check:', data);
+      
+      if (data.status === 'completed') {
+        // Payment successful
+        if (statusCheckIntervalRef.current) {
+          clearInterval(statusCheckIntervalRef.current);
+        }
+        handlePaymentSuccess(data);
+      } else if (data.status === 'failed') {
+        if (statusCheckIntervalRef.current) {
+          clearInterval(statusCheckIntervalRef.current);
+        }
+        Swal.close();
         Swal.fire({
-          title: "Payment Successful! 🎉",
-          html: `<div>KSh ${amount} paid successfully</div>`,
-          icon: "success",
-          confirmButtonText: "View Results",
-        }).then(() => navigate("/credit-check-status"));
+          title: "Payment Failed",
+          text: "The payment was not successful. Please try again.",
+          icon: "error"
+        });
+        setIsProcessing(false);
       }
-    }, 5000);
-    return interval;
+    } catch (error) {
+      console.error('Status check error:', error);
+    }
   };
 
   const handlePayment = async () => {
     if (!userData.phone) {
-      Swal.fire({ title: "Phone Required", text: "Please complete CRB check first.", icon: "warning" });
+      Swal.fire({ 
+        title: "Phone Required", 
+        text: "Please complete CRB check first.", 
+        icon: "warning" 
+      });
       return;
     }
 
     const displayPhone = formatPhoneForDisplay(userData.phone);
     const hashPayPhone = formatPhoneForHashPay(userData.phone);
-    // Validate phone format (should be 07XXXXXXXX - 10 digits starting with 0)
+    
     if (!hashPayPhone.match(/^07[0-9]{8}$/)) {
-          Swal.fire({ 
-            title: "Invalid Phone Number", 
-            text: `Phone number "${displayPhone}" is invalid. Must be a valid Kenyan number (e.g., 0712345678).`, 
-            icon: "error" 
-          });
+      Swal.fire({ 
+        title: "Invalid Phone Number", 
+        text: `Phone number "${displayPhone}" is invalid. Must be a valid Kenyan number (e.g., 0712345678).`, 
+        icon: "error" 
+      });
       return;
     }
 
     const confirmed = await Swal.fire({
       title: "Confirm Service Fee Payment",
-      html: `<div>... payment details ...</div>`,
+      html: `
+        <div style="text-align: center">
+          <p><strong>Amount:</strong> KSh ${depositAmount}</p>
+          <p><strong>Phone:</strong> ${displayPhone}</p>
+          <p><strong>Service:</strong> CRB Status Check</p>
+        </div>
+      `,
       icon: "info",
       showCancelButton: true,
       confirmButtonText: "Proceed to M-Pesa",
+      cancelButtonText: "Cancel"
     });
+    
     if (!confirmed.isConfirmed) return;
 
-    Swal.fire({ title: "Initiating Payment", text: "Connecting to M-Pesa...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ 
+      title: "Initiating Payment", 
+      text: "Connecting to M-Pesa...", 
+      allowOutsideClick: false, 
+      didOpen: () => Swal.showLoading() 
+    });
+    
     setIsProcessing(true);
 
     try {
       const reference = `CRB-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-      const response = await fetch(HASHPAY_INITIATE_URL, {
+      
+      console.log('Initiating payment via backend:', `${BACKEND_URL}/api/initiate-payment`);
+      
+      const response = await fetch(`${BACKEND_URL}/api/initiate-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_key: HASHPAY_API_KEY,
-          account_id: HASHPAY_ACCOUNT_ID,
           amount: depositAmount,
-          msisdn: hashPayPhone,
-          reference: reference
+          phone: hashPayPhone,
+          reference: reference,
+          userId: localStorage.getItem('userId') || 'anonymous'
         })
       });
 
       const data = await response.json();
-      if (data.success && data.checkout_id) {
+      console.log('Initiation response:', data);
+      
+      if (data.success && data.checkoutId) {
+        currentCheckoutIdRef.current = data.checkoutId;
+        
+        // Register with WebSocket if available
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'register',
+            checkoutId: data.checkoutId
+          }));
+        }
+        
         Swal.close();
         Swal.fire({
           title: "Check Your Phone",
-          html: `<div>Enter M-Pesa PIN to pay KSh ${depositAmount}<br/>Reference: ${reference}</div>`,
+          html: `
+            <div>
+              <p>Enter M-Pesa PIN to pay KSh ${depositAmount}</p>
+              <p><strong>Reference:</strong> ${reference}</p>
+              <p>We'll automatically confirm your payment once completed.</p>
+            </div>
+          `,
           icon: "info",
           confirmButtonText: "I've Completed Payment",
           showCancelButton: true,
+          cancelButtonText: "Cancel"
         }).then((result) => {
           if (result.isConfirmed) {
-            pollTransactionStatus(data.checkout_id, depositAmount, displayPhone);
+            Swal.fire({
+              title: "Waiting for Confirmation",
+              html: "Please wait while we confirm your payment...",
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading();
+              }
+            });
+            
+            // Start polling for payment status every 5 seconds
+            statusCheckIntervalRef.current = setInterval(() => {
+              if (currentCheckoutIdRef.current) {
+                checkPaymentStatus(currentCheckoutIdRef.current);
+              }
+            }, 5000);
+            
+            // Set timeout for payment confirmation (2 minutes)
+            setTimeout(() => {
+              if (paymentStatus !== 'success' && statusCheckIntervalRef.current) {
+                clearInterval(statusCheckIntervalRef.current);
+                Swal.close();
+                Swal.fire({
+                  title: "Payment Not Confirmed",
+                  text: "Payment confirmation timed out. Please check your M-Pesa statement or contact support.",
+                  icon: "warning"
+                });
+                setIsProcessing(false);
+              }
+            }, 120000);
           } else {
             setIsProcessing(false);
           }
         });
       } else {
-        
-       console.log(data)
-        throw new Error(data.message || "Initiation failed");
+        console.error('Initiation response:', data);
+        throw new Error(data.error || data.message || "Initiation failed");
       }
     } catch (error) {
-      Swal.fire({ title: "Payment Failed", text: error.message, icon: "error" });
+      console.error('Payment error:', error);
+      Swal.fire({ 
+        title: "Payment Failed", 
+        text: error.message || "Unable to initiate payment. Please try again.", 
+        icon: "error" 
+      });
       setIsProcessing(false);
     }
   };
 
   return (
-    <section className="checker-section" style={{ /*minHeight: '100vh', display: 'flex', alignItems: 'center' */}}>
+    <section className="checker-section">
       <div className="container">
         <div className="section-title">
           <h2>Service Fee Payment</h2>
@@ -218,21 +343,8 @@ function ServicePaymentHashback() {
               <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
               <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
               <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
-              <li><i className="fas fa-4"></i> Wait for confirmation and view your results</li>
+              <li><i className="fas fa-4"></i> Payment will be automatically confirmed</li>
             </ul>
-          </div>
-
-          <div style={{ 
-            background: '#fff8e1', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            margin: '20px 0',
-            textAlign: 'center'
-          }}>
-            <i className="fas fa-shield-alt" style={{ color: '#f39c12', marginRight: '8px' }}></i>
-            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
-              Your payment is secured and encrypted via HashPay. We value your privacy.
-            </span>
           </div>
 
           <button
@@ -274,110 +386,6 @@ function ServicePaymentHashback() {
           </div>
         </div>
       </div>
-
-      {/* Add additional styles for the component */}
-      <style>{`
-        .amount-input label {
-          font-weight: 600;
-          margin-bottom: 10px;
-          color: var(--dark);
-        }
-        
-        .deposit-card {
-          animation: fadeInUp 0.5s ease-out;
-          max-width: 500px;
-          margin: 0 auto;
-          background: white;
-          border-radius: 20px;
-          padding: 30px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        }
-        
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .deposit-title {
-          font-size: 1.3rem;
-          font-weight: 700;
-          text-align: center;
-          margin-bottom: 25px;
-          color: #333;
-        }
-        
-        .mpesa-info {
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 12px;
-          margin: 20px 0;
-        }
-        
-        .mpesa-info h4 {
-          margin-bottom: 15px;
-          color: #333;
-          font-size: 1rem;
-        }
-        
-        .mpesa-info ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        
-        .mpesa-info ul li {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 10px;
-          font-size: 0.9rem;
-          color: #555;
-        }
-        
-        .mpesa-info ul li i {
-          width: 24px;
-          height: 24px;
-          background: #e8f5e9;
-          border-radius: 50%;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          color: #059669;
-          font-size: 0.8rem;
-          font-style: normal;
-        }
-        
-        .deposit-btn {
-          width: 100%;
-          padding: 15px;
-          border: none;
-          border-radius: 12px;
-          font-size: 1rem;
-          font-weight: 600;
-          color: white;
-          cursor: pointer;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .deposit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(5, 150, 105, 0.3);
-        }
-        
-        .deposit-btn:active:not(:disabled) {
-          transform: translateY(0);
-        }
-        
-        .btn-secondary:hover {
-          opacity: 0.9;
-        }
-      `}</style>
     </section>
   );
 }
