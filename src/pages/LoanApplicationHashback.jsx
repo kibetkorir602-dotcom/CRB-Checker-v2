@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 
-function ServicePaymentHashback() {
+function LoanApplicationHashback() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({ phone: "" });
   const [depositAmount] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const wsRef = useRef(null);
+  const currentCheckoutIdRef = useRef(null);
+  const statusCheckIntervalRef = useRef(null);
 
-  // HashPay Configuration
-  const HASHPAY_API_KEY = 'h26520UMWO05P';
-  const HASHPAY_ACCOUNT_ID = 'HP456097';
-  const HASHPAY_INITIATE_URL = 'https://api.hashback.co.ke/initiatestk';
-  const HASHPAY_STATUS_URL = 'https://api.hashback.co.ke/transactionstatus';
+  // Your published backend URL
+  const BACKEND_URL = 'https://hash-back-server-production.up.railway.app';
 
   useEffect(() => {
     const storedData = localStorage.getItem('crbCheckData');
@@ -20,14 +21,61 @@ function ServicePaymentHashback() {
       const formData = JSON.parse(storedData);
       setUserData(prev => ({ ...prev, phone: formData.phoneNumber || "" }));
     }
+    
+    // Setup WebSocket connection
+    setupWebSocket();
+    
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (statusCheckIntervalRef.current) {
+        clearInterval(statusCheckIntervalRef.current);
+      }
+    };
   }, []);
 
-  // CORRECTED: Format phone number to 07XXXXXXXX format (what HashPay expects)
+  const setupWebSocket = () => {
+    try {
+      // Use wss:// for secure WebSocket
+      wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
+      
+      wsRef.current.onopen = () => {
+        console.log('WebSocket connected');
+      };
+      
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('WebSocket message:', message);
+          
+          if (message.type === 'payment_completed') {
+            handlePaymentSuccess(message.data);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+      
+      wsRef.current.onclose = () => {
+        console.log('WebSocket disconnected');
+        // Attempt to reconnect after 5 seconds
+        setTimeout(setupWebSocket, 5000);
+      };
+    } catch (error) {
+      console.log('WebSocket not supported, using polling fallback');
+    }
+  };
+
   const formatPhoneForHashPay = (phone) => {
     let p = phone.toString().replace(/\D/g, "");
     
     if (p.startsWith("0")) {
-      return p; // Return as is: 07XXXXXXXX
+      return p;
     }
     if (p.startsWith("7") || p.startsWith("1")) {
       return "0" + p;
@@ -46,66 +94,67 @@ function ServicePaymentHashback() {
     return p;
   };
 
-  const checkTransactionStatus = async (checkoutId) => {
-    try {
-      const response = await fetch(HASHPAY_STATUS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: HASHPAY_API_KEY,
-          account_id: HASHPAY_ACCOUNT_ID,
-          checkoutid: checkoutId
-        })
-      });
-      const data = await response.json();
-      console.log('Status check response:', data);
-      // Check if ResultCode is "0" meaning success
-      return data.ResultCode === "0";
-    } catch (error) {
-      console.error('Status check error:', error);
-      return false;
+  const handlePaymentSuccess = (data) => {
+    setPaymentStatus('success');
+    setIsProcessing(false);
+    
+    if (statusCheckIntervalRef.current) {
+      clearInterval(statusCheckIntervalRef.current);
     }
+    
+    localStorage.setItem('crbPaymentVerified', 'true');
+    localStorage.setItem('paymentTransactionId', data.transactionId);
+    
+    Swal.fire({
+      title: "Payment Successful! 🎉",
+      html: `
+        <div style="text-align: center;">
+          <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
+          <h3 style="margin: 15px 0;">KSh ${data.amount} Paid</h3>
+          <p>Service fee payment completed successfully</p>
+          <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
+            Transaction ID: ${data.transactionId}
+          </p>
+        </div>
+      `,
+      icon: "success",
+      confirmButtonText: "View Results",
+      confirmButtonColor: "#059669"
+    }).then(() => navigate("/credit-check-status"));
   };
 
-  const pollTransactionStatus = (checkoutId, amount, phone) => {
-    let attempts = 0;
-    const maxAttempts = 30; // 2.5 minutes
-    let interval;
-
-    const checkStatus = async () => {
-      attempts++;
-      console.log(`Polling attempt ${attempts}/${maxAttempts}`);
+  const checkPaymentStatus = async (checkoutId) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkoutId })
+      });
       
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        Swal.fire({ 
-          title: "Timeout", 
-          text: "Payment confirmation timed out. Please check your M-Pesa transaction history.", 
-          icon: "warning" 
+      const data = await response.json();
+      console.log('Status check:', data);
+      
+      if (data.status === 'completed') {
+        // Payment successful
+        if (statusCheckIntervalRef.current) {
+          clearInterval(statusCheckIntervalRef.current);
+        }
+        handlePaymentSuccess(data);
+      } else if (data.status === 'failed') {
+        if (statusCheckIntervalRef.current) {
+          clearInterval(statusCheckIntervalRef.current);
+        }
+        Swal.close();
+        Swal.fire({
+          title: "Payment Failed",
+          text: "The payment was not successful. Please try again.",
+          icon: "error"
         });
         setIsProcessing(false);
-        return;
       }
-      
-      const isSuccess = await checkTransactionStatus(checkoutId);
-      if (isSuccess) {
-        clearInterval(interval);
-        localStorage.setItem('crbPaymentVerified', 'true');
-        Swal.fire({
-          title: "Payment Successful! 🎉",
-          html: `<div style="text-align: center;">
-            <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
-            <h3 style="margin: 15px 0;">KSh ${amount} Paid</h3>
-            <p>Service fee payment completed successfully</p>
-          </div>`,
-          icon: "success",
-          confirmButtonText: "View Results",
-        }).then(() => navigate("/credit-check-status"));
-      }
-    };
-
-    interval = setInterval(checkStatus, 5000);
-    return interval;
+    } catch (error) {
+      console.error('Status check error:', error);
+    }
   };
 
   const handlePayment = async () => {
@@ -188,24 +237,34 @@ function ServicePaymentHashback() {
     try {
       const reference = `CRB-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       
-      const response = await fetch(HASHPAY_INITIATE_URL, {
+      console.log('Initiating payment via backend:', `${BACKEND_URL}/api/initiate-payment`);
+      
+      const response = await fetch(`${BACKEND_URL}/api/initiate-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_key: HASHPAY_API_KEY,
-          account_id: HASHPAY_ACCOUNT_ID,
-          amount: depositAmount.toString(),
-          msisdn: hashPayPhone, // Now in 07XXXXXXXX format
-          reference: reference
+          amount: depositAmount,
+          phone: hashPayPhone,
+          reference: reference,
+          userId: localStorage.getItem('userId') || 'anonymous'
         })
       });
 
       const data = await response.json();
-      console.log('HashPay response:', data);
-
-      if (data.success && data.checkout_id) {
-        Swal.close();
+      console.log('Initiation response:', data);
+      
+      if (data.success && data.checkoutId) {
+        currentCheckoutIdRef.current = data.checkoutId;
         
+        // Register with WebSocket if available
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'register',
+            checkoutId: data.checkoutId
+          }));
+        }
+        
+        Swal.close();
         Swal.fire({
           title: "Check Your Phone",
           html: `
@@ -227,8 +286,44 @@ function ServicePaymentHashback() {
           cancelButtonText: "Cancel",
         }).then((result) => {
           if (result.isConfirmed) {
-            // Start polling for payment status
-            pollTransactionStatus(data.checkout_id, depositAmount, displayPhone);
+            Swal.fire({
+              title: "Waiting for Confirmation",
+              html: `
+                <div style="text-align: center;">
+                  <div class="spinner-border text-success" role="status" style="width: 48px; height: 48px;">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p style="margin-top: 15px;">Please wait while we confirm your payment...</p>
+                  <p style="font-size: 0.85rem; color: #666;">This will take a few moments</p>
+                </div>
+              `,
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading();
+              }
+            });
+            
+            // Start polling for payment status every 5 seconds
+            statusCheckIntervalRef.current = setInterval(() => {
+              if (currentCheckoutIdRef.current) {
+                checkPaymentStatus(currentCheckoutIdRef.current);
+              }
+            }, 5000);
+            
+            // Set timeout for payment confirmation (2 minutes)
+            setTimeout(() => {
+              if (paymentStatus !== 'success' && statusCheckIntervalRef.current) {
+                clearInterval(statusCheckIntervalRef.current);
+                Swal.close();
+                Swal.fire({
+                  title: "Payment Not Confirmed",
+                  text: "Payment confirmation timed out. Please check your M-Pesa statement or contact support.",
+                  icon: "warning",
+                  confirmButtonColor: "#059669"
+                });
+                setIsProcessing(false);
+              }
+            }, 120000);
           } else {
             setIsProcessing(false);
             Swal.fire({
@@ -239,7 +334,7 @@ function ServicePaymentHashback() {
           }
         });
       } else {
-        throw new Error(data.message || "Initiation failed");
+        throw new Error(data.error || data.message || "Initiation failed");
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -254,7 +349,7 @@ function ServicePaymentHashback() {
 
   return (
     <section className="checker-section">
-      <div className="containerr">
+      <div className="container">
         <div className="section-title">
           <h2>Service Fee Payment</h2>
           <p>Complete the payment to view your CRB status report</p>
@@ -301,6 +396,18 @@ function ServicePaymentHashback() {
             </div>
           )}
 
+          <div className="mpesa-info">
+            <h4>
+              <i className="fas fa-info-circle"></i> How to Complete Payment
+            </h4>
+            <ul>
+              <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
+              <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
+              <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
+              <li><i className="fas fa-4"></i> Payment will be automatically confirmed</li>
+            </ul>
+          </div>
+
           <button
             className="deposit-btn"
             onClick={handlePayment}
@@ -313,18 +420,6 @@ function ServicePaymentHashback() {
             <i className={`fas ${isProcessing ? 'fa-spinner fa-spin' : 'fa-mobile-alt'}`}></i>
             {isProcessing ? "Processing..." : "Pay with M-Pesa via HashPay"}
           </button>
-
-          <div className="mpesa-info">
-            <h4>
-              <i className="fas fa-info-circle"></i> How to Complete Payment
-            </h4>
-            <ul>
-              <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
-              <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
-              <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
-              <li><i className="fas fa-4"></i> Wait for confirmation and view your results</li>
-            </ul>
-          </div>
 
           <div style={{
             background: '#fff8e1', 
@@ -379,7 +474,7 @@ function ServicePaymentHashback() {
           margin: 0 auto;
           background: white;
           border-radius: 20px;
-          padding: 12px;
+          padding: 30px;
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
         }
         
@@ -395,18 +490,18 @@ function ServicePaymentHashback() {
         }
         
         .deposit-title {
-          font-size: 1.2rem;
-          font-weight: 600;
+          font-size: 1.3rem;
+          font-weight: 700;
           text-align: center;
-          margin-bottom: 15px;
+          margin-bottom: 25px;
           color: #333;
         }
         
         .mpesa-info {
           background: #f8f9fa;
-          padding: 12px;
+          padding: 20px;
           border-radius: 12px;
-          margin: 15px 0;
+          margin: 20px 0;
         }
         
         .mpesa-info h4 {
@@ -472,4 +567,4 @@ function ServicePaymentHashback() {
   );
 }
 
-export default ServicePaymentHashback;
+export default LoanApplicationHashback;
