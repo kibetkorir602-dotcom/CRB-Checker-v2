@@ -214,7 +214,7 @@ function ServicePaymentHashback() {
       if (data.success/* && data.checkoutId*/) {
         currentCheckoutIdRef.current = data.checkoutId;
         // Register with WebSocket if available
-        /if (data.checkoutId && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        if (data.checkoutId && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'register',
             checkoutId: data.checkoutId
