@@ -22,7 +22,6 @@ function LoanApplicationHashback() {
       setUserData(prev => ({ ...prev, phone: formData.phoneNumber || "" }));
     }
     
-    // Setup WebSocket connection
     setupWebSocket();
     
     return () => {
@@ -37,7 +36,6 @@ function LoanApplicationHashback() {
 
   const setupWebSocket = () => {
     try {
-      // Use wss:// for secure WebSocket
       wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
       
       wsRef.current.onopen = () => {
@@ -63,7 +61,6 @@ function LoanApplicationHashback() {
       
       wsRef.current.onclose = () => {
         console.log('WebSocket disconnected');
-        // Attempt to reconnect after 5 seconds
         setTimeout(setupWebSocket, 5000);
       };
     } catch (error) {
@@ -103,17 +100,17 @@ function LoanApplicationHashback() {
     }
     
     localStorage.setItem('crbPaymentVerified', 'true');
-    localStorage.setItem('paymentTransactionId', data.transactionId);
+    localStorage.setItem('paymentTransactionId', data.transactionId || data.TransactionID);
     
     Swal.fire({
       title: "Payment Successful! 🎉",
       html: `
         <div style="text-align: center;">
           <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
-          <h3 style="margin: 15px 0;">KSh ${data.amount} Paid</h3>
+          <h3 style="margin: 15px 0;">KSh ${data.amount || depositAmount} Paid</h3>
           <p>Service fee payment completed successfully</p>
           <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
-            Transaction ID: ${data.transactionId}
+            Transaction ID: ${data.transactionId || data.TransactionID || 'N/A'}
           </p>
         </div>
       `,
@@ -135,7 +132,6 @@ function LoanApplicationHashback() {
       console.log('Status check:', data);
       
       if (data.status === 'completed') {
-        // Payment successful
         if (statusCheckIntervalRef.current) {
           clearInterval(statusCheckIntervalRef.current);
         }
@@ -176,7 +172,6 @@ function LoanApplicationHashback() {
       hashpay: hashPayPhone
     });
     
-    // Validate phone format (should be 07XXXXXXXX - 10 digits starting with 0)
     if (!hashPayPhone.match(/^07[0-9]{8}$/)) {
       Swal.fire({ 
         title: "Invalid Phone Number", 
@@ -186,7 +181,6 @@ function LoanApplicationHashback() {
       return;
     }
 
-    // Confirmation modal
     const confirmed = await Swal.fire({
       title: "Confirm Service Fee Payment",
       html: `
@@ -251,9 +245,11 @@ function LoanApplicationHashback() {
       });
 
       const data = await response.json();
-      console.log('Initiation response:', data);
+      console.log('Initiation response from backend:', data);
       
-      if (data.success && data.checkoutId) {
+      // Check if payment was initiated successfully
+      // The backend should return success: true and checkoutId from HashPay
+      if (data.success === true && data.checkoutId) {
         currentCheckoutIdRef.current = data.checkoutId;
         
         // Register with WebSocket if available
@@ -278,6 +274,9 @@ function LoanApplicationHashback() {
                   Reference: ${reference}
                 </p>
               </div>
+              <p style="font-size: 0.8rem; color: #059669; margin-top: 10px;">
+                <i class="fas fa-clock"></i> You have 2 minutes to complete the payment
+              </p>
             </div>
           `,
           icon: "info",
@@ -334,6 +333,8 @@ function LoanApplicationHashback() {
           }
         });
       } else {
+        // Payment initiation failed
+        console.error('Initiation failed:', data);
         throw new Error(data.error || data.message || "Initiation failed");
       }
     } catch (error) {
