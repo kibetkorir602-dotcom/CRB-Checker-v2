@@ -326,7 +326,7 @@ function ServicePaymentHashback() {
             </ul>
           </div>
 
-          <div style={{ ]
+          <div style={{
             background: '#fff8e1', 
             padding: '12px', 
             borderRadius: '8px', 

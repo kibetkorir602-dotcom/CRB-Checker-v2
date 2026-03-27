@@ -98,8 +98,13 @@ function ServicePaymentHashback() {
 
     const displayPhone = formatPhoneForDisplay(userData.phone);
     const hashPayPhone = formatPhoneForHashPay(userData.phone);
-    if (!hashPayPhone.match(/^254[0-9]{9}$/)) {
-      Swal.fire({ title: "Invalid Phone", text: "Phone number must be in format 07XXXXXXXX or 2547XXXXXXXX", icon: "error" });
+    // Validate phone format (should be 07XXXXXXXX - 10 digits starting with 0)
+    if (!hashPayPhone.match(/^07[0-9]{8}$/)) {
+          Swal.fire({ 
+            title: "Invalid Phone Number", 
+            text: `Phone number "${displayPhone}" is invalid. Must be a valid Kenyan number (e.g., 0712345678).`, 
+            icon: "error" 
+          });
       return;
     }
 
@@ -146,6 +151,8 @@ function ServicePaymentHashback() {
           }
         });
       } else {
+        
+       console.log(data)
         throw new Error(data.message || "Initiation failed");
       }
     } catch (error) {
