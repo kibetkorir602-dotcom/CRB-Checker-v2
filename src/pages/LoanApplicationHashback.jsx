@@ -1,29 +1,65 @@
 import React, { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
+import './Loan.css';
 
 function LoanApplicationHashback() {
   const navigate = useNavigate();
-  const [userData, setUserData] = useState({ phone: "" });
-  const [depositAmount] = useState(100);
+  const [userData, setUserData] = useState({ name: "", phone_number: "" });
+  const [selectedLoan, setSelectedLoan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null);
   const wsRef = useRef(null);
   const currentCheckoutIdRef = useRef(null);
+  const currentReferenceRef = useRef(null);
   const statusCheckIntervalRef = useRef(null);
+  const paymentCompletedRef = useRef(false);
 
   // Your published backend URL
-  const BACKEND_URL = 'https://hash-back-server-production.up.railway.app';
+  const BACKEND_URL = 'https://hash-back-server-production-2010.up.railway.app';
+
+  // Loan options data
+  const loanOptions = [
+    { amount: 5500, fee: 100 },
+    { amount: 6800, fee: 130 },
+    { amount: 7800, fee: 170 },
+    { amount: 9800, fee: 190 },
+    { amount: 11200, fee: 230 },
+    { amount: 16800, fee: 250 },
+    { amount: 21200, fee: 270 },
+    { amount: 25600, fee: 400 },
+    { amount: 30000, fee: 470 },
+    { amount: 35400, fee: 590 },
+    { amount: 39800, fee: 730 },
+    { amount: 44200, fee: 1010 },
+    { amount: 48600, fee: 1600 },
+    { amount: 60600, fee: 2050 },
+  ];
 
   useEffect(() => {
-    const storedData = localStorage.getItem('crbCheckData');
+    // Load user data from localStorage or sessionStorage
+    const storedData = localStorage.getItem("crbCheckData");
     if (storedData) {
       const formData = JSON.parse(storedData);
-      setUserData(prev => ({ ...prev, phone: formData.phoneNumber || "" }));
+      setUserData({
+        name: formData.fullName || "Customer",
+        phone_number: formData.phoneNumber || "",
+      });
+    }
+
+    // Check for session storage data
+    const sessionData = JSON.parse(sessionStorage.getItem("myLoan") || "{}");
+    if (sessionData.phone_number) {
+      setUserData((prev) => ({
+        ...prev,
+        name: sessionData.name || prev.name,
+        phone_number: sessionData.phone_number || prev.phone_number,
+      }));
     }
     
+    // Setup WebSocket connection
     setupWebSocket();
     
+    // Cleanup on unmount
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
@@ -36,10 +72,22 @@ function LoanApplicationHashback() {
 
   const setupWebSocket = () => {
     try {
-      wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
+      // Close existing connection if any
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+      
+      wsRef.current = new WebSocket('wss://hash-back-server-production-2010.up.railway.app');
       
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
+        // Re-register if we have a checkout ID
+        if (currentCheckoutIdRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'register',
+            checkoutId: currentCheckoutIdRef.current
+          }));
+        }
       };
       
       wsRef.current.onmessage = (event) => {
@@ -48,7 +96,10 @@ function LoanApplicationHashback() {
           console.log('WebSocket message:', message);
           
           if (message.type === 'payment_completed') {
+            console.log('🎉 Payment completed message received!', message.data);
             handlePaymentSuccess(message.data);
+          } else if (message.type === 'registered') {
+            console.log('✅ Registered for checkout:', message.checkoutId);
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -61,6 +112,7 @@ function LoanApplicationHashback() {
       
       wsRef.current.onclose = () => {
         console.log('WebSocket disconnected');
+        // Attempt to reconnect after 5 seconds
         setTimeout(setupWebSocket, 5000);
       };
     } catch (error) {
@@ -91,33 +143,84 @@ function LoanApplicationHashback() {
     return p;
   };
 
+  const handleLoanSelection = (loan) => {
+    setSelectedLoan(loan);
+    // Hide error message when loan is selected
+    const errorMessage = document.getElementById("error-message");
+    if (errorMessage) {
+      errorMessage.style.display = "none";
+    }
+
+    // Update session storage
+    const updatedData = {
+      ...userData,
+      loan_amount: loan.amount,
+      processing_fee: loan.fee,
+    };
+    sessionStorage.setItem("myLoan", JSON.stringify(updatedData));
+  };
+
   const handlePaymentSuccess = (data) => {
-    setPaymentStatus('success');
-    setIsProcessing(false);
-    
-    if (statusCheckIntervalRef.current) {
-      clearInterval(statusCheckIntervalRef.current);
+    // Prevent duplicate success messages
+    if (paymentCompletedRef.current) {
+      console.log('Payment already processed, skipping duplicate');
+      return;
     }
     
-    localStorage.setItem('crbPaymentVerified', 'true');
-    localStorage.setItem('paymentTransactionId', data.transactionId || data.TransactionID);
+    console.log('Processing payment success:', data);
+    paymentCompletedRef.current = true;
     
+    // Clear any pending intervals
+    if (statusCheckIntervalRef.current) {
+      clearInterval(statusCheckIntervalRef.current);
+      statusCheckIntervalRef.current = null;
+    }
+    
+    // Close any open Swal modals
+    Swal.close();
+    
+    setIsProcessing(false);
+    
+    // Store payment verification
+    localStorage.setItem('loanPaymentVerified', 'true');
+    localStorage.setItem('loanTransactionId', data.transactionId || data.TransactionID);
+    localStorage.setItem('loanAmount', selectedLoan?.amount || data.amount);
+    localStorage.setItem('processingFee', selectedLoan?.fee || 0);
+    
+    // Show success message
     Swal.fire({
       title: "Payment Successful! 🎉",
       html: `
         <div style="text-align: center;">
           <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
-          <h3 style="margin: 15px 0;">KSh ${data.amount || depositAmount} Paid</h3>
-          <p>Service fee payment completed successfully</p>
-          <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
-            Transaction ID: ${data.transactionId || data.TransactionID || 'N/A'}
+          <h3 style="margin: 15px 0;">KSh ${data.amount || selectedLoan?.fee} Paid</h3>
+          <p>Processing fee payment completed successfully</p>
+          <div style="background: #f8f9ff; padding: 12px; border-radius: 8px; margin: 15px 0; text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span>Loan Amount:</span>
+              <strong>Ksh ${selectedLoan?.amount?.toLocaleString() || 'N/A'}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span>Processing Fee Paid:</span>
+              <strong>Ksh ${selectedLoan?.fee || data.amount || 'N/A'}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Transaction ID:</span>
+              <strong style="font-size: 0.8rem;">${data.transactionId || data.TransactionID || 'N/A'}</strong>
+            </div>
+          </div>
+          <p style="color: #6b7280; margin: 15px 0;">
+            Your loan application is now being processed. You'll receive funds shortly.
           </p>
         </div>
       `,
       icon: "success",
-      confirmButtonText: "View Results",
-      confirmButtonColor: "#059669"
-    }).then(() => navigate("/credit-check-status"));
+      confirmButtonText: "Continue",
+      confirmButtonColor: "#059669",
+      allowOutsideClick: false
+    }).then(() => {
+      navigate("/");
+    });
   };
 
   const checkPaymentStatus = async (checkoutId) => {
@@ -134,11 +237,13 @@ function LoanApplicationHashback() {
       if (data.status === 'completed') {
         if (statusCheckIntervalRef.current) {
           clearInterval(statusCheckIntervalRef.current);
+          statusCheckIntervalRef.current = null;
         }
         handlePaymentSuccess(data);
       } else if (data.status === 'failed') {
         if (statusCheckIntervalRef.current) {
           clearInterval(statusCheckIntervalRef.current);
+          statusCheckIntervalRef.current = null;
         }
         Swal.close();
         Swal.fire({
@@ -147,27 +252,39 @@ function LoanApplicationHashback() {
           icon: "error"
         });
         setIsProcessing(false);
+        paymentCompletedRef.current = false;
       }
     } catch (error) {
       console.error('Status check error:', error);
     }
   };
 
-  const handlePayment = async () => {
-    if (!userData.phone) {
-      Swal.fire({ 
-        title: "Phone Required", 
-        text: "Please complete CRB check first.", 
-        icon: "warning" 
+  const handleApply = async () => {
+    if (!selectedLoan) {
+      const errorMessage = document.getElementById("error-message");
+      if (errorMessage) {
+        errorMessage.style.display = "block";
+      }
+      return;
+    }
+
+    if (!userData.phone_number) {
+      Swal.fire({
+        title: "Phone Number Required",
+        text: "Please complete the CRB check first to provide your phone number",
+        icon: "warning",
       });
       return;
     }
 
-    const displayPhone = formatPhoneForDisplay(userData.phone);
-    const hashPayPhone = formatPhoneForHashPay(userData.phone);
+    // Reset payment completed flag
+    paymentCompletedRef.current = false;
+
+    const displayPhone = formatPhoneForDisplay(userData.phone_number);
+    const hashPayPhone = formatPhoneForHashPay(userData.phone_number);
     
     console.log('Phone formatting:', {
-      original: userData.phone,
+      original: userData.phone_number,
       display: displayPhone,
       hashpay: hashPayPhone
     });
@@ -181,43 +298,52 @@ function LoanApplicationHashback() {
       return;
     }
 
+    // Confirm loan application modal
     const confirmed = await Swal.fire({
-      title: "Confirm Service Fee Payment",
+      title: "Confirm Loan Application",
       html: `
         <div style="text-align: center;">
-          <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 18px; border-radius: 16px 16px 0 0; color: white; margin: -20px -20px 20px -20px;">
-            <div style="font-size: 36px; margin-bottom: 8px;"><i class="fas fa-credit-card"></i></div>
-            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">Payment Details</div>
+          <div style="background: linear-gradient(135deg, #006600 0%, #004d00 100%); padding: 18px; border-radius: 16px 16px 0 0; color: white; margin: -20px -20px 20px -20px;">
+            <div style="font-size: 36px; margin-bottom: 8px;"><i class="fas fa-check-circle"></i></div>
+            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">Confirm Loan</div>
+            <div style="font-size: 0.8rem; opacity: 0.9;">Review details before payment</div>
           </div>
           
           <div style="background: #f8f9ff; border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: left;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(5, 150, 105, 0.1);">
-              <span style="color: #666;">Service Fee:</span>
-              <span style="color: #059669; font-weight: 700;">KSh ${depositAmount}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 102, 0, 0.1);">
+              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Loan Amount:</span>
+              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${selectedLoan.amount.toLocaleString()}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span style="color: #666;">Phone Number:</span>
-              <span style="color: #059669; font-weight: 600;">${displayPhone}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 102, 0, 0.1);">
+              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Processing Fee:</span>
+              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${selectedLoan.fee}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Total Repayment:</span>
+              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${(selectedLoan.amount * 1.1).toLocaleString()}</span>
             </div>
           </div>
           
-          <div style="background: rgba(5, 150, 105, 0.1); padding: 12px; border-radius: 8px; margin: 14px 0;">
-            <i class="fas fa-info-circle" style="color: #059669; margin-right: 8px;"></i>
-            <span style="font-size: 0.85rem; color: #059669;">This payment is required to view your CRB status results</span>
+          <div style="background: rgba(0, 102, 0, 0.08); padding: 12px; border-radius: 8px; margin: 14px 0; font-weight: 600; color: #10b981; border: 1px solid rgba(0, 102, 0, 0.15); font-size: 0.85rem;">
+            <i class="fas fa-mobile-alt"></i> ${displayPhone}
           </div>
+          
+          <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
+            Click "Proceed to M-Pesa" to pay the processing fee and complete your loan application.
+          </p>
         </div>
       `,
       icon: "info",
       showCancelButton: true,
       confirmButtonText: "Proceed to M-Pesa",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#059669",
+      confirmButtonColor: "#006600",
       cancelButtonColor: "#6c757d",
       reverseButtons: true,
       focusConfirm: false,
       showCloseButton: true,
     });
-    
+
     if (!confirmed.isConfirmed) return;
 
     Swal.fire({ 
@@ -229,7 +355,8 @@ function LoanApplicationHashback() {
     setIsProcessing(true);
 
     try {
-      const reference = `CRB-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      const reference = `LOAN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      currentReferenceRef.current = reference;
       
       console.log('Initiating payment via backend:', `${BACKEND_URL}/api/initiate-payment`);
       
@@ -237,82 +364,75 @@ function LoanApplicationHashback() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: depositAmount,
+          amount: selectedLoan.fee,
           phone: hashPayPhone,
           reference: reference,
-          userId: localStorage.getItem('userId') || 'anonymous'
+          userId: localStorage.getItem('userId') || 'anonymous',
+          loanAmount: selectedLoan.amount,
+          loanType: 'standard'
         })
       });
 
       const data = await response.json();
       console.log('Initiation response from backend:', data);
       
-      // Check if payment was initiated successfully
-      // The backend should return success: true and checkoutId from HashPay
       if (data.success === true && data.checkoutId) {
+        // Store checkoutId
         currentCheckoutIdRef.current = data.checkoutId;
         
         // Register with WebSocket if available
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'register',
-            checkoutId: data.checkoutId
+            checkoutId: currentCheckoutIdRef.current
           }));
+          console.log('Registered with WebSocket for checkout:', currentCheckoutIdRef.current);
+        } else {
+          console.log('WebSocket not ready, will register on connection');
         }
         
         Swal.close();
+        
+        // Show waiting for payment modal
         Swal.fire({
           title: "Check Your Phone",
           html: `
             <div style="text-align: center;">
               <i class="fas fa-mobile-alt" style="font-size: 48px; color: #065f46;"></i>
               <h3 style="margin: 15px 0;">Enter M-Pesa PIN</h3>
-              <p>Check your phone to authorize payment of <strong>KSh ${depositAmount}</strong></p>
+              <p>Check your phone to authorize payment of <strong>KSh ${selectedLoan.fee}</strong></p>
               <p style="margin-top: 10px;"><small>Phone: ${displayPhone}</small></p>
               <div style="background: #f8f9ff; padding: 12px; border-radius: 8px; margin-top: 15px;">
                 <p style="font-size: 0.8rem; margin: 0; color: #666;">
                   Reference: ${reference}
                 </p>
               </div>
-              <p style="font-size: 0.8rem; color: #059669; margin-top: 10px;">
-                <i class="fas fa-clock"></i> You have 2 minutes to complete the payment
+              <div class="spinner-border text-success" role="status" style="margin-top: 20px; width: 40px; height: 40px;">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p style="font-size: 0.85rem; color: #059669; margin-top: 10px;">
+                <i class="fas fa-clock"></i> Waiting for payment confirmation...
               </p>
             </div>
           `,
           icon: "info",
-          confirmButtonText: "I've Completed Payment",
-          showCancelButton: true,
-          cancelButtonText: "Cancel",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            Swal.fire({
-              title: "Waiting for Confirmation",
-              html: `
-                <div style="text-align: center;">
-                  <div class="spinner-border text-success" role="status" style="width: 48px; height: 48px;">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
-                  <p style="margin-top: 15px;">Please wait while we confirm your payment...</p>
-                  <p style="font-size: 0.85rem; color: #666;">This will take a few moments</p>
-                </div>
-              `,
-              allowOutsideClick: false,
-              didOpen: () => {
-                Swal.showLoading();
-              }
-            });
-            
-            // Start polling for payment status every 5 seconds
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          didOpen: () => {
+            // Start polling as backup (5 seconds)
             statusCheckIntervalRef.current = setInterval(() => {
-              if (currentCheckoutIdRef.current) {
+              if (currentCheckoutIdRef.current && !paymentCompletedRef.current) {
                 checkPaymentStatus(currentCheckoutIdRef.current);
               }
             }, 5000);
             
             // Set timeout for payment confirmation (2 minutes)
             setTimeout(() => {
-              if (paymentStatus !== 'success' && statusCheckIntervalRef.current) {
-                clearInterval(statusCheckIntervalRef.current);
+              if (!paymentCompletedRef.current) {
+                if (statusCheckIntervalRef.current) {
+                  clearInterval(statusCheckIntervalRef.current);
+                  statusCheckIntervalRef.current = null;
+                }
                 Swal.close();
                 Swal.fire({
                   title: "Payment Not Confirmed",
@@ -321,20 +441,12 @@ function LoanApplicationHashback() {
                   confirmButtonColor: "#059669"
                 });
                 setIsProcessing(false);
+                paymentCompletedRef.current = false;
               }
             }, 120000);
-          } else {
-            setIsProcessing(false);
-            Swal.fire({
-              title: "Payment Cancelled",
-              text: "You can complete the payment from your M-Pesa app.",
-              icon: "info"
-            });
           }
         });
       } else {
-        // Payment initiation failed
-        console.error('Initiation failed:', data);
         throw new Error(data.error || data.message || "Initiation failed");
       }
     } catch (error) {
@@ -345,226 +457,89 @@ function LoanApplicationHashback() {
         icon: "error" 
       });
       setIsProcessing(false);
+      paymentCompletedRef.current = false;
     }
   };
 
   return (
-    <section className="checker-section">
-      <div className="container">
-        <div className="section-title">
-          <h2>Service Fee Payment</h2>
-          <p>Complete the payment to view your CRB status report</p>
-        </div>
-        
-        <div className="deposit-card">
-          <div className="deposit-title">
-            <i className="fas fa-lock" style={{ marginRight: '8px' }}></i>
-            Secure Payment via HashPay
-          </div>
+    <div className="loan-application-container">
+      <div className="welcome-card">
+        <p className="welcome-text">
+          Hi <span className="user-name">{userData.name || "Customer"}</span>,
+          you qualify for these loan options based on your{" "}
+          <strong>credit records</strong>.
+        </p>
+      </div>
 
-          <div className="amount-input" style={{ marginBottom: '25px' }}>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '10px', color: '#333' }}>
-              Service Fee Amount
-            </label>
-            <div style={{ 
-              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-              padding: '20px',
-              borderRadius: '12px',
-              textAlign: 'center'
-            }}>
-              <span style={{ fontSize: '32px', fontWeight: '800', color: '#059669' }}>
-                KSh {depositAmount.toLocaleString()}
-              </span>
-            </div>
-          </div>
+      <div className="loan-card">
+        <h3 className="card-title">Select Your Loan Amount</h3>
 
-          {userData.phone && (
-            <div className="phone-info" style={{ 
-              background: '#e8f5e9',
-              padding: '15px',
-              borderRadius: '10px',
-              margin: '20px 0',
-              textAlign: 'center',
-              borderLeft: '4px solid #059669'
-            }}>
-              <p style={{ margin: 0 }}>
-                <i className="fas fa-mobile-alt" style={{ marginRight: '8px', color: '#059669' }}></i>
-                <strong>Phone Number:</strong> {formatPhoneForDisplay(userData.phone)}
-              </p>
-              <p style={{ fontSize: '0.85rem', color: '#666', margin: '8px 0 0 0' }}>
-                M-Pesa payment will be sent to this number
-              </p>
-            </div>
-          )}
-
-          <div className="mpesa-info">
-            <h4>
-              <i className="fas fa-info-circle"></i> How to Complete Payment
-            </h4>
-            <ul>
-              <li><i className="fas fa-1"></i> Click "Pay with M-Pesa" button below</li>
-              <li><i className="fas fa-2"></i> Check your phone for M-Pesa STK Push prompt</li>
-              <li><i className="fas fa-3"></i> Enter your M-Pesa PIN to authorize payment</li>
-              <li><i className="fas fa-4"></i> Payment will be automatically confirmed</li>
-            </ul>
-          </div>
-
-          <button
-            className="deposit-btn"
-            onClick={handlePayment}
-            disabled={isProcessing || !userData.phone}
-            style={{
-              background: isProcessing ? '#9ca3af' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-              cursor: (isProcessing || !userData.phone) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <i className={`fas ${isProcessing ? 'fa-spinner fa-spin' : 'fa-mobile-alt'}`}></i>
-            {isProcessing ? "Processing..." : "Pay with M-Pesa via HashPay"}
-          </button>
-
-          <div style={{
-            background: '#fff8e1', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            margin: '15px 0',
-            textAlign: 'center'
-          }}>
-            <i className="fas fa-shield-alt" style={{ color: '#f39c12', marginRight: '8px' }}></i>
-            <span style={{ fontSize: '0.85rem', color: '#856404' }}>
-              Your payment is secured and encrypted. We value your privacy.
-            </span>
-          </div>
-          
-          {!userData.phone && (
-            <div style={{ 
-              color: '#dc3545', 
-              textAlign: 'center', 
-              marginTop: '15px', 
-              fontSize: '0.9rem',
-              padding: '12px',
-              background: '#f8d7da',
-              borderRadius: '8px'
-            }}>
-              <i className="fas fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
-              Please complete the CRB check form first to provide your phone number
-            </div>
-          )}
-
-          <div style={{ marginTop: '20px', textAlign: 'center' }}>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => navigate("/crb-check")}
-              style={{ fontSize: '0.9rem', padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+        <div className="loan-grid">
+          {loanOptions.map((loan, index) => (
+            <div
+              key={index}
+              className={`loan-option ${selectedLoan?.amount === loan.amount ? "selected" : ""}`}
+              onClick={() => handleLoanSelection(loan)}
             >
-              <i className="fas fa-arrow-left"></i> Back to CRB Check
-            </button>
-          </div>
+              <div className="loan-amount">
+                Ksh {loan.amount.toLocaleString()}
+              </div>
+              <div className="processing-fee">Fee: Ksh {loan.fee}</div>
+            </div>
+          ))}
         </div>
       </div>
 
+      <button
+        id="apply-btn"
+        className="btn-apply"
+        onClick={handleApply}
+        disabled={isProcessing || !selectedLoan}
+      >
+        {isProcessing ? "Processing..." : "Get Loan Now"}{" "}
+        <i className="fas fa-arrow-right"></i>
+      </button>
+
+      <div
+        id="error-message"
+        className="error-message"
+        style={{ display: "none" }}
+      >
+        Please select a loan amount to continue
+      </div>
+
+      <a href="/" className="back-link">
+        <i className="fas fa-arrow-left"></i> Back to Home
+      </a>
+
       <style>{`
-        .amount-input label {
-          font-weight: 600;
-          margin-bottom: 10px;
-          color: var(--dark);
-        }
-        
-        .deposit-card {
-          animation: fadeInUp 0.5s ease-out;
-          max-width: 700px;
-          margin: 0 auto;
-          background: white;
-          border-radius: 20px;
-          padding: 30px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        }
-        
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .deposit-title {
-          font-size: 1.3rem;
-          font-weight: 700;
-          text-align: center;
-          margin-bottom: 25px;
-          color: #333;
-        }
-        
-        .mpesa-info {
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 12px;
-          margin: 20px 0;
-        }
-        
-        .mpesa-info h4 {
-          margin-bottom: 15px;
-          color: #333;
-          font-size: 1rem;
-        }
-        
-        .mpesa-info ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        
-        .mpesa-info ul li {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 10px;
-          font-size: 0.9rem;
-          color: #555;
-        }
-        
-        .mpesa-info ul li i {
-          width: 24px;
-          height: 24px;
-          background: #e8f5e9;
+        .spinner-border {
+          display: inline-block;
+          width: 40px;
+          height: 40px;
+          border: 4px solid #059669;
+          border-right-color: transparent;
           border-radius: 50%;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          color: #059669;
-          font-size: 0.8rem;
-          font-style: normal;
+          animation: spinner-border 0.75s linear infinite;
         }
         
-        .deposit-btn {
-          width: 100%;
-          padding: 15px;
-          border: none;
-          border-radius: 12px;
-          font-size: 1rem;
-          font-weight: 600;
-          color: white;
-          cursor: pointer;
-          transition: transform 0.2s, box-shadow 0.2s;
+        @keyframes spinner-border {
+          to { transform: rotate(360deg); }
         }
         
-        .deposit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 5px 15px rgba(5, 150, 105, 0.3);
-        }
-        
-        .deposit-btn:active:not(:disabled) {
-          transform: translateY(0);
-        }
-        
-        .btn-secondary:hover {
-          opacity: 0.9;
+        .visually-hidden {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
         }
       `}</style>
-    </section>
+    </div>
   );
 }
 
