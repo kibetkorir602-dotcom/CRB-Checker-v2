@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 function ServicePaymentHashback() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({ phone: "" });
-  const [depositAmount] = useState(5);
+  const [depositAmount] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
   const wsRef = useRef(null);
   const currentCheckoutIdRef = useRef(null);
