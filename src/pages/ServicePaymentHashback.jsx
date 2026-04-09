@@ -5,13 +5,13 @@ import { useNavigate } from "react-router-dom";
 function ServicePaymentHashback() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState({ phone: "" });
-  const [depositAmount] = useState(100);
+  const [depositAmount] = useState(5);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null);
   const wsRef = useRef(null);
   const currentCheckoutIdRef = useRef(null);
   const currentReferenceRef = useRef(null);
   const statusCheckIntervalRef = useRef(null);
+  const paymentCompletedRef = useRef(false); // Prevent duplicate success messages
 
   // Your published backend URL
   const BACKEND_URL = 'https://hash-back-server-production.up.railway.app';
@@ -26,6 +26,7 @@ function ServicePaymentHashback() {
     // Setup WebSocket connection
     setupWebSocket();
     
+    // Cleanup on unmount
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
@@ -38,10 +39,22 @@ function ServicePaymentHashback() {
 
   const setupWebSocket = () => {
     try {
+      // Close existing connection if any
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+      
       wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
       
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
+        // Re-register if we have a checkout ID
+        if (currentCheckoutIdRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'register',
+            checkoutId: currentCheckoutIdRef.current
+          }));
+        }
       };
       
       wsRef.current.onmessage = (event) => {
@@ -50,7 +63,11 @@ function ServicePaymentHashback() {
           console.log('WebSocket message:', message);
           
           if (message.type === 'payment_completed') {
+            console.log('🎉 Payment completed message received!', message.data);
+            // Call handlePaymentSuccess with the data
             handlePaymentSuccess(message.data);
+          } else if (message.type === 'registered') {
+            console.log('✅ Registered for checkout:', message.checkoutId);
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -63,6 +80,7 @@ function ServicePaymentHashback() {
       
       wsRef.current.onclose = () => {
         console.log('WebSocket disconnected');
+        // Attempt to reconnect after 5 seconds
         setTimeout(setupWebSocket, 5000);
       };
     } catch (error) {
@@ -94,16 +112,32 @@ function ServicePaymentHashback() {
   };
 
   const handlePaymentSuccess = (data) => {
-    setPaymentStatus('success');
-    setIsProcessing(false);
-    
-    if (statusCheckIntervalRef.current) {
-      clearInterval(statusCheckIntervalRef.current);
+    // Prevent duplicate success messages
+    if (paymentCompletedRef.current) {
+      console.log('Payment already processed, skipping duplicate');
+      return;
     }
     
+    console.log('Processing payment success:', data);
+    paymentCompletedRef.current = true;
+    
+    // Clear any pending intervals
+    if (statusCheckIntervalRef.current) {
+      clearInterval(statusCheckIntervalRef.current);
+      statusCheckIntervalRef.current = null;
+    }
+    
+    // Close any open Swal modals
+    Swal.close();
+    
+    setIsProcessing(false);
+    
+    // Store payment verification in localStorage
     localStorage.setItem('crbPaymentVerified', 'true');
     localStorage.setItem('paymentTransactionId', data.transactionId || data.TransactionID);
+    localStorage.setItem('paymentAmount', data.amount || depositAmount);
     
+    // Show success message
     Swal.fire({
       title: "Payment Successful! 🎉",
       html: `
@@ -111,15 +145,23 @@ function ServicePaymentHashback() {
           <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
           <h3 style="margin: 15px 0;">KSh ${data.amount || depositAmount} Paid</h3>
           <p>Service fee payment completed successfully</p>
-          <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
-            Transaction ID: ${data.transactionId || data.TransactionID || 'N/A'}
-          </p>
+          <div style="background: #f8f9ff; padding: 12px; border-radius: 8px; margin-top: 15px; text-align: left;">
+            <p style="margin: 5px 0; font-size: 0.85rem;">
+              <strong>Transaction ID:</strong> ${data.transactionId || data.TransactionID || 'N/A'}
+            </p>
+            <p style="margin: 5px 0; font-size: 0.85rem;">
+              <strong>Reference:</strong> ${data.reference || currentReferenceRef.current || 'N/A'}
+            </p>
+          </div>
         </div>
       `,
       icon: "success",
       confirmButtonText: "View Results",
-      confirmButtonColor: "#059669"
-    }).then(() => navigate("/credit-check-status"));
+      confirmButtonColor: "#059669",
+      allowOutsideClick: false
+    }).then(() => {
+      navigate("/credit-check-status");
+    });
   };
 
   const checkPaymentStatus = async (checkoutId) => {
@@ -136,11 +178,13 @@ function ServicePaymentHashback() {
       if (data.status === 'completed') {
         if (statusCheckIntervalRef.current) {
           clearInterval(statusCheckIntervalRef.current);
+          statusCheckIntervalRef.current = null;
         }
         handlePaymentSuccess(data);
       } else if (data.status === 'failed') {
         if (statusCheckIntervalRef.current) {
           clearInterval(statusCheckIntervalRef.current);
+          statusCheckIntervalRef.current = null;
         }
         Swal.close();
         Swal.fire({
@@ -149,6 +193,7 @@ function ServicePaymentHashback() {
           icon: "error"
         });
         setIsProcessing(false);
+        paymentCompletedRef.current = false;
       }
     } catch (error) {
       console.error('Status check error:', error);
@@ -164,6 +209,9 @@ function ServicePaymentHashback() {
       });
       return;
     }
+
+    // Reset payment completed flag
+    paymentCompletedRef.current = false;
 
     const displayPhone = formatPhoneForDisplay(userData.phone);
     const hashPayPhone = formatPhoneForHashPay(userData.phone);
@@ -250,10 +298,8 @@ function ServicePaymentHashback() {
       const data = await response.json();
       console.log('Initiation response from backend:', data);
       
-      // Check if payment was initiated successfully (CheckoutRequestID exists)
-      // The backend should return the HashPay response
       if (data.success === true && data.checkoutId) {
-        // Store checkoutId from HashPay response
+        // Store checkoutId
         currentCheckoutIdRef.current = data.checkoutId;
         
         // Register with WebSocket if available
@@ -262,9 +308,14 @@ function ServicePaymentHashback() {
             type: 'register',
             checkoutId: currentCheckoutIdRef.current
           }));
+          console.log('Registered with WebSocket for checkout:', currentCheckoutIdRef.current);
+        } else {
+          console.log('WebSocket not ready, will register on connection');
         }
         
         Swal.close();
+        
+        // Show waiting for payment modal
         Swal.fire({
           title: "Check Your Phone",
           html: `
@@ -278,45 +329,32 @@ function ServicePaymentHashback() {
                   Reference: ${reference}
                 </p>
               </div>
-              <p style="font-size: 0.8rem; color: #059669; margin-top: 10px;">
-                <i class="fas fa-clock"></i> You have 2 minutes to complete the payment
+              <div class="spinner-border text-success" role="status" style="margin-top: 20px; width: 40px; height: 40px;">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p style="font-size: 0.85rem; color: #059669; margin-top: 10px;">
+                <i class="fas fa-clock"></i> Waiting for payment confirmation...
               </p>
             </div>
           `,
           icon: "info",
-          confirmButtonText: "I've Completed Payment",
-          showCancelButton: true,
-          cancelButtonText: "Cancel",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            Swal.fire({
-              title: "Waiting for Confirmation",
-              html: `
-                <div style="text-align: center;">
-                  <div class="spinner-border text-success" role="status" style="width: 48px; height: 48px;">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
-                  <p style="margin-top: 15px;">Please wait while we confirm your payment...</p>
-                  <p style="font-size: 0.85rem; color: #666;">This will take a few moments</p>
-                </div>
-              `,
-              allowOutsideClick: false,
-              didOpen: () => {
-                Swal.showLoading();
-              }
-            });
-            
-            // Start polling for payment status using checkoutId
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          didOpen: () => {
+            // Start polling as backup (5 seconds)
             statusCheckIntervalRef.current = setInterval(() => {
-              if (currentCheckoutIdRef.current) {
+              if (currentCheckoutIdRef.current && !paymentCompletedRef.current) {
                 checkPaymentStatus(currentCheckoutIdRef.current);
               }
             }, 5000);
             
             // Set timeout for payment confirmation (2 minutes)
             setTimeout(() => {
-              if (paymentStatus !== 'success' && statusCheckIntervalRef.current) {
-                clearInterval(statusCheckIntervalRef.current);
+              if (!paymentCompletedRef.current) {
+                if (statusCheckIntervalRef.current) {
+                  clearInterval(statusCheckIntervalRef.current);
+                  statusCheckIntervalRef.current = null;
+                }
                 Swal.close();
                 Swal.fire({
                   title: "Payment Not Confirmed",
@@ -325,19 +363,12 @@ function ServicePaymentHashback() {
                   confirmButtonColor: "#059669"
                 });
                 setIsProcessing(false);
+                paymentCompletedRef.current = false;
               }
             }, 120000);
-          } else {
-            setIsProcessing(false);
-            Swal.fire({
-              title: "Payment Cancelled",
-              text: "You can complete the payment from your M-Pesa app.",
-              icon: "info"
-            });
           }
         });
       } else {
-        // Payment initiation failed
         throw new Error(data.error || data.message || "Initiation failed");
       }
     } catch (error) {
@@ -348,6 +379,7 @@ function ServicePaymentHashback() {
         icon: "error" 
       });
       setIsProcessing(false);
+      paymentCompletedRef.current = false;
     }
   };
 
@@ -565,6 +597,32 @@ function ServicePaymentHashback() {
         
         .btn-secondary:hover {
           opacity: 0.9;
+        }
+        
+        .spinner-border {
+          display: inline-block;
+          width: 40px;
+          height: 40px;
+          border: 4px solid #059669;
+          border-right-color: transparent;
+          border-radius: 50%;
+          animation: spinner-border 0.75s linear infinite;
+        }
+        
+        @keyframes spinner-border {
+          to { transform: rotate(360deg); }
+        }
+        
+        .visually-hidden {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
         }
       `}</style>
     </section>
