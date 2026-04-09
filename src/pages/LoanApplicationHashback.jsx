@@ -19,7 +19,7 @@ function LoanApplicationHashback() {
 
   // Loan options data
   const loanOptions = [
-    { amount: 5500, fee: 100 },
+    { amount: 5500, fee: 5 },
     { amount: 6800, fee: 130 },
     { amount: 7800, fee: 170 },
     { amount: 9800, fee: 190 },
@@ -160,6 +160,50 @@ function LoanApplicationHashback() {
     sessionStorage.setItem("myLoan", JSON.stringify(updatedData));
   };
 
+  const showLoanProcessingMessage = (loan, phone, reference) => {
+    Swal.fire({
+      title: "Payment Successful! 🎉",
+      html: `
+        <div style="text-align: center;">
+          <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
+          <h3 style="margin: 15px 0; color: #10b981;">Payment Completed</h3>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span style="color: #666;">Loan Amount:</span>
+              <strong style="color: #10b981;">Ksh ${loan.amount.toLocaleString()}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+              <span style="color: #666;">Processing Fee:</span>
+              <strong style="color: #10b981;">Ksh ${loan.fee}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #666;">Phone Number:</span>
+              <strong style="color: #10b981;">${phone}</strong>
+            </div>
+          </div>
+          <div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin: 15px 0;">
+            <i class="fas fa-spinner fa-spin" style="color: #059669; font-size: 24px; margin-bottom: 10px;"></i>
+            <p style="color: #059669; font-weight: 500; margin: 10px 0 0 0;">
+              Your loan application is now being processed!
+            </p>
+            <p style="color: #666; font-size: 0.85rem; margin: 8px 0 0 0;">
+              You will receive funds within 24 hours. Please keep checking your M-Pesa account.
+            </p>
+          </div>
+          <p style="color: #6b7280; font-size: 0.8rem; margin: 10px 0;">
+            Reference: ${reference}
+          </p>
+        </div>
+      `,
+      icon: "success",
+      confirmButtonText: "Continue",
+      confirmButtonColor: "#059669",
+      allowOutsideClick: false
+    }).then(() => {
+      navigate("/");
+    });
+  };
+
   const handlePaymentSuccess = (data) => {
     // Prevent duplicate success messages
     if (paymentCompletedRef.current) {
@@ -187,40 +231,11 @@ function LoanApplicationHashback() {
     localStorage.setItem('loanAmount', selectedLoan?.amount || data.amount);
     localStorage.setItem('processingFee', selectedLoan?.fee || 0);
     
-    // Show success message
-    Swal.fire({
-      title: "Payment Successful! 🎉",
-      html: `
-        <div style="text-align: center;">
-          <i class="fas fa-check-circle" style="font-size: 48px; color: #10b981;"></i>
-          <h3 style="margin: 15px 0;">KSh ${data.amount || selectedLoan?.fee} Paid</h3>
-          <p>Processing fee payment completed successfully</p>
-          <div style="background: #f8f9ff; padding: 12px; border-radius: 8px; margin: 15px 0; text-align: left;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-              <span>Loan Amount:</span>
-              <strong>Ksh ${selectedLoan?.amount?.toLocaleString() || 'N/A'}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-              <span>Processing Fee Paid:</span>
-              <strong>Ksh ${selectedLoan?.fee || data.amount || 'N/A'}</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Transaction ID:</span>
-              <strong style="font-size: 0.8rem;">${data.transactionId || data.TransactionID || 'N/A'}</strong>
-            </div>
-          </div>
-          <p style="color: #6b7280; margin: 15px 0;">
-            Your loan application is now being processed. You'll receive funds shortly.
-          </p>
-        </div>
-      `,
-      icon: "success",
-      confirmButtonText: "Continue",
-      confirmButtonColor: "#059669",
-      allowOutsideClick: false
-    }).then(() => {
-      navigate("/");
-    });
+    // Show loan processing message
+    const displayPhone = formatPhoneForDisplay(userData.phone_number);
+    const reference = currentReferenceRef.current || data.reference || 'N/A';
+    
+    showLoanProcessingMessage(selectedLoan, displayPhone, reference);
   };
 
   const checkPaymentStatus = async (checkoutId) => {
@@ -248,8 +263,21 @@ function LoanApplicationHashback() {
         Swal.close();
         Swal.fire({
           title: "Payment Failed",
-          text: "The payment was not successful. Please try again.",
-          icon: "error"
+          html: `
+            <div style="text-align: center;">
+              <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #dc2626;"></i>
+              <h3 style="margin: 15px 0;">Payment Failed</h3>
+              <p>The payment was not successful. Please try again.</p>
+              <div style="background: #fef2f2; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                <p style="font-size: 0.85rem; margin: 0; color: #991b1b;">
+                  ${data.errorDesc || "Transaction could not be completed"}
+                </p>
+              </div>
+            </div>
+          `,
+          icon: "error",
+          confirmButtonText: "Try Again",
+          confirmButtonColor: "#059669"
         });
         setIsProcessing(false);
         paymentCompletedRef.current = false;
@@ -400,18 +428,23 @@ function LoanApplicationHashback() {
             <div style="text-align: center;">
               <i class="fas fa-mobile-alt" style="font-size: 48px; color: #065f46;"></i>
               <h3 style="margin: 15px 0;">Enter M-Pesa PIN</h3>
-              <p>Check your phone to authorize payment of <strong>KSh ${selectedLoan.fee}</strong></p>
+              <p>Check your phone to authorize payment of <strong>Ksh ${selectedLoan.fee}</strong></p>
               <p style="margin-top: 10px;"><small>Phone: ${displayPhone}</small></p>
               <div style="background: #f8f9ff; padding: 12px; border-radius: 8px; margin-top: 15px;">
                 <p style="font-size: 0.8rem; margin: 0; color: #666;">
                   Reference: ${reference}
                 </p>
               </div>
-              <div class="spinner-border text-success" role="status" style="margin-top: 20px; width: 40px; height: 40px;">
-                <span class="visually-hidden">Loading...</span>
+              <div style="margin-top: 20px;">
+                <div class="spinner-border text-success" role="status" style="width: 40px; height: 40px;">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
               </div>
-              <p style="font-size: 0.85rem; color: #059669; margin-top: 10px;">
+              <p style="font-size: 0.85rem; color: #059669; margin-top: 15px;">
                 <i class="fas fa-clock"></i> Waiting for payment confirmation...
+              </p>
+              <p style="font-size: 0.75rem; color: #888; margin-top: 10px;">
+                You have 2 minutes to complete the payment
               </p>
             </div>
           `,
@@ -436,8 +469,21 @@ function LoanApplicationHashback() {
                 Swal.close();
                 Swal.fire({
                   title: "Payment Not Confirmed",
-                  text: "Payment confirmation timed out. Please check your M-Pesa statement or contact support.",
+                  html: `
+                    <div style="text-align: center;">
+                      <i class="fas fa-clock" style="font-size: 48px; color: #f59e0b;"></i>
+                      <h3 style="margin: 15px 0;">Payment Timeout</h3>
+                      <p>We didn't receive confirmation of your payment within the expected time.</p>
+                      <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                        <p style="font-size: 0.85rem; margin: 0; color: #92400e;">
+                          Please check your M-Pesa transaction history.
+                          If the payment was deducted, your loan will be processed automatically.
+                        </p>
+                      </div>
+                    </div>
+                  `,
                   icon: "warning",
+                  confirmButtonText: "OK",
                   confirmButtonColor: "#059669"
                 });
                 setIsProcessing(false);
@@ -453,8 +499,21 @@ function LoanApplicationHashback() {
       console.error('Payment error:', error);
       Swal.fire({ 
         title: "Payment Failed", 
-        text: error.message || "Unable to initiate payment. Please try again.", 
-        icon: "error" 
+        html: `
+          <div style="text-align: center;">
+            <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #dc2626;"></i>
+            <h3 style="margin: 15px 0;">Payment Failed</h3>
+            <p>${error.message || "Unable to initiate payment. Please try again."}</p>
+            <div style="background: #fef2f2; padding: 12px; border-radius: 8px; margin-top: 15px;">
+              <p style="font-size: 0.85rem; margin: 0; color: #991b1b;">
+                <i class="fas fa-info-circle"></i> Ensure your phone number is correct and you have sufficient M-Pesa balance.
+              </p>
+            </div>
+          </div>
+        `,
+        icon: "error",
+        confirmButtonText: "Try Again",
+        confirmButtonColor: "#059669"
       });
       setIsProcessing(false);
       paymentCompletedRef.current = false;
