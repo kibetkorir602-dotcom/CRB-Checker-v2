@@ -8,18 +8,21 @@ function LoanApplicationHashback() {
   const [userData, setUserData] = useState({ name: "", phone_number: "" });
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showLoanSummary, setShowLoanSummary] = useState(false);
+  const [loanApplicationData, setLoanApplicationData] = useState(null);
   const wsRef = useRef(null);
   const currentCheckoutIdRef = useRef(null);
   const currentReferenceRef = useRef(null);
   const statusCheckIntervalRef = useRef(null);
   const paymentCompletedRef = useRef(false);
+  const summaryRef = useRef(null);
 
   // Your published backend URL
   const BACKEND_URL = 'https://hash-back-server-production-2010.up.railway.app';
 
   // Loan options data
   const loanOptions = [
-    { amount: 5500, fee: 100 },
+    { amount: 5500, fee: 5 },
     { amount: 6800, fee: 130 },
     { amount: 7800, fee: 170 },
     { amount: 9800, fee: 190 },
@@ -77,7 +80,7 @@ function LoanApplicationHashback() {
         wsRef.current.close();
       }
       
-      wsRef.current = new WebSocket('wss://hash-back-server-production-2010.up.railway.app');
+      wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
       
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
@@ -161,6 +164,31 @@ function LoanApplicationHashback() {
   };
 
   const showLoanProcessingMessage = (loan, phone, reference) => {
+    // Set loan application data for summary
+    const applicationDate = new Date();
+    const formattedDate = applicationDate.toLocaleDateString('en-GB');
+    const formattedTime = applicationDate.toLocaleTimeString('en-GB');
+    
+    setLoanApplicationData({
+      name: userData.name,
+      phone: phone,
+      loanAmount: loan.amount,
+      processingFee: loan.fee,
+      totalRepayment: loan.amount * 1.1,
+      reference: reference,
+      applicationDate: formattedDate,
+      applicationTime: formattedTime,
+      status: 'Processing',
+      estimatedDisbursement: 'Within 24 hours'
+    });
+    
+    setShowLoanSummary(true);
+    
+    // Scroll to summary after a short delay
+    setTimeout(() => {
+      summaryRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    
     Swal.fire({
       title: "Payment Successful! 🎉",
       html: `
@@ -196,11 +224,12 @@ function LoanApplicationHashback() {
         </div>
       `,
       icon: "success",
-      confirmButtonText: "Continue",
+      confirmButtonText: "View Loan Summary",
       confirmButtonColor: "#059669",
       allowOutsideClick: false
     }).then(() => {
-      navigate("/");
+      // Scroll to summary when user clicks View Loan Summary
+      summaryRef.current?.scrollIntoView({ behavior: 'smooth' });
     });
   };
 
@@ -230,6 +259,15 @@ function LoanApplicationHashback() {
     localStorage.setItem('loanTransactionId', data.transactionId || data.TransactionID);
     localStorage.setItem('loanAmount', selectedLoan?.amount || data.amount);
     localStorage.setItem('processingFee', selectedLoan?.fee || 0);
+    localStorage.setItem('loanReference', currentReferenceRef.current || data.reference || 'N/A');
+    localStorage.setItem('loanApplicationData', JSON.stringify({
+      name: userData.name,
+      phone: formatPhoneForDisplay(userData.phone_number),
+      loanAmount: selectedLoan?.amount,
+      processingFee: selectedLoan?.fee,
+      reference: currentReferenceRef.current || data.reference,
+      transactionId: data.transactionId || data.TransactionID
+    }));
     
     // Show loan processing message
     const displayPhone = formatPhoneForDisplay(userData.phone_number);
@@ -522,6 +560,8 @@ function LoanApplicationHashback() {
 
   return (
     <div className="loan-application-container">
+      {!showLoanSummary && !loanApplicationData && (
+      <>
       <div className="welcome-card">
         <p className="welcome-text">
           Hi <span className="user-name">{userData.name || "Customer"}</span>,
@@ -570,6 +610,122 @@ function LoanApplicationHashback() {
       <a href="/" className="back-link">
         <i className="fas fa-arrow-left"></i> Back to Home
       </a>
+      </>)}
+      {/* Loan Summary Component */}
+      {showLoanSummary && loanApplicationData && (
+        <div className="loan-summary-section" ref={summaryRef}>
+          <div className="loan-summary-card">
+            <div className="summary-header">
+              <h3><i className="fas fa-file-invoice"></i> Loan Application Summary</h3>
+              <div className="summary-status processing">
+                <i className="fas fa-spinner fa-spin"></i> {loanApplicationData.status}
+              </div>
+            </div>
+            
+            <div className="summary-content">
+              <div className="personal-info-section">
+                <h4><i className="fas fa-user"></i> Applicant Information</h4>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Full Name</span>
+                    <span className="info-value">{loanApplicationData.name}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Phone Number</span>
+                    <span className="info-value">{loanApplicationData.phone}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Application Date</span>
+                    <span className="info-value">{loanApplicationData.applicationDate}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Application Time</span>
+                    <span className="info-value">{loanApplicationData.applicationTime}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="loan-details-section">
+                <h4><i className="fas fa-hand-holding-usd"></i> Loan Details</h4>
+                <div className="details-grid">
+                  <div className="detail-item">
+                    <div className="detail-icon">
+                      <i className="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div>
+                      <div className="detail-label">Loan Amount</div>
+                      <div className="detail-value">Ksh {loanApplicationData.loanAmount.toLocaleString()}</div>
+                    </div>
+                  </div>
+                  <div className="detail-item">
+                    <div className="detail-icon">
+                      <i className="fas fa-percent"></i>
+                    </div>
+                    <div>
+                      <div className="detail-label">Processing Fee</div>
+                      <div className="detail-value">Ksh {loanApplicationData.processingFee}</div>
+                    </div>
+                  </div>
+                  <div className="detail-item">
+                    <div className="detail-icon">
+                      <i className="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                      <div className="detail-label">Interest (10%)</div>
+                      <div className="detail-value">Ksh {(loanApplicationData.loanAmount * 0.1).toLocaleString()}</div>
+                    </div>
+                  </div>
+                  <div className="detail-item">
+                    <div className="detail-icon">
+                      <i className="fas fa-coins"></i>
+                    </div>
+                    <div>
+                      <div className="detail-label">Total Repayment</div>
+                      <div className="detail-value">Ksh {loanApplicationData.totalRepayment.toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="disbursement-info">
+                <h4><i className="fas fa-clock"></i> Disbursement Information</h4>
+                <div className="disbursement-details">
+                  <div className="disbursement-item">
+                    <i className="fas fa-hourglass-half"></i>
+                    <div>
+                      <div className="disbursement-label">Estimated Time</div>
+                      <div className="disbursement-value">{loanApplicationData.estimatedDisbursement}</div>
+                    </div>
+                  </div>
+                  <div className="disbursement-item">
+                    <i className="fas fa-mobile-alt"></i>
+                    <div>
+                      <div className="disbursement-label">Recipient M-Pesa</div>
+                      <div className="disbursement-value">{loanApplicationData.phone}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="reference-info">
+                <div className="reference-item">
+                  <span className="reference-label">Application Reference:</span>
+                  <span className="reference-value">{loanApplicationData.reference}</span>
+                </div>
+              </div>
+              
+              <div className="summary-footer">
+                <button className="btn-print" onClick={() => window.print()}>
+                  <i className="fas fa-print"></i> Print Summary
+                </button>
+                <button className="btn-home" onClick={() => navigate("/")}>
+                  <i className="fas fa-home"></i> Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .spinner-border {
@@ -596,6 +752,221 @@ function LoanApplicationHashback() {
           clip: rect(0, 0, 0, 0);
           white-space: nowrap;
           border: 0;
+        }
+        
+        /* Loan Summary Styles */
+        .loan-summary-section {
+          margin-top: 40px;
+          animation: fadeInUp 0.5s ease-out;
+        }
+        
+        .loan-summary-card {
+          background: white;
+          border-radius: 20px;
+          padding: 30px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          margin: 20px 0;
+        }
+        
+        .summary-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 20px;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #e8f5e9;
+        }
+        
+        .summary-header h3 {
+          color: #006600;
+          font-size: 1.3rem;
+          margin: 0;
+        }
+        
+        .summary-status {
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+        
+        .summary-status.processing {
+          background: #fff3e0;
+          color: #f39c12;
+        }
+        
+        .personal-info-section h4,
+        .loan-details-section h4,
+        .disbursement-info h4 {
+          color: #333;
+          font-size: 1rem;
+          margin-bottom: 15px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e8f5e9;
+        }
+        
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 15px;
+          margin-bottom: 25px;
+        }
+        
+        .info-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px;
+          background: #f8f9fa;
+          border-radius: 8px;
+        }
+        
+        .info-label {
+          color: #666;
+          font-size: 0.85rem;
+        }
+        
+        .info-value {
+          font-weight: 600;
+          color: #333;
+        }
+        
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 15px;
+          margin-bottom: 25px;
+        }
+        
+        .detail-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 15px;
+          background: #f8f9fa;
+          border-radius: 10px;
+        }
+        
+        .detail-icon {
+          width: 40px;
+          height: 40px;
+          background: #e8f5e9;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #059669;
+          font-size: 1.2rem;
+        }
+        
+        .detail-label {
+          font-size: 0.75rem;
+          color: #666;
+          margin-bottom: 4px;
+        }
+        
+        .detail-value {
+          font-weight: 700;
+          color: #059669;
+          font-size: 1rem;
+        }
+        
+        .disbursement-details {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 15px;
+          margin-bottom: 25px;
+        }
+        
+        .disbursement-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 15px;
+          background: #f8f9fa;
+          border-radius: 10px;
+        }
+        
+        .disbursement-item i {
+          font-size: 24px;
+          color: #059669;
+        }
+        
+        .disbursement-label {
+          font-size: 0.75rem;
+          color: #666;
+          margin-bottom: 4px;
+        }
+        
+        .disbursement-value {
+          font-weight: 600;
+          color: #333;
+        }
+        
+        .reference-info {
+          background: #f8f9ff;
+          padding: 15px;
+          border-radius: 10px;
+          margin: 20px 0;
+          text-align: center;
+        }
+        
+        .reference-label {
+          color: #666;
+          font-size: 0.8rem;
+        }
+        
+        .reference-value {
+          font-weight: 600;
+          color: #059669;
+          margin-left: 10px;
+        }
+        
+        .summary-footer {
+          display: flex;
+          gap: 15px;
+          justify-content: center;
+          margin-top: 25px;
+        }
+        
+        .btn-print, .btn-home {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        
+        .btn-print {
+          background: #6c757d;
+          color: white;
+        }
+        
+        .btn-print:hover {
+          background: #5a6268;
+          transform: translateY(-2px);
+        }
+        
+        .btn-home {
+          background: #059669;
+          color: white;
+        }
+        
+        .btn-home:hover {
+          background: #047857;
+          transform: translateY(-2px);
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>
