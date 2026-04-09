@@ -22,7 +22,7 @@ function LoanApplicationHashback() {
 
   // Loan options data
   const loanOptions = [
-    { amount: 5500, fee: 5 },
+    { amount: 5500, fee: 100 },
     { amount: 6800, fee: 130 },
     { amount: 7800, fee: 170 },
     { amount: 9800, fee: 190 },
