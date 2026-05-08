@@ -18,7 +18,7 @@ function LoanApplicationHashback() {
   const summaryRef = useRef(null);
 
   // Your published backend URL
-  const BACKEND_URL = 'https://hash-back-server-production-2010.up.railway.app';
+  const BACKEND_URL = 'https://hash-back-server-production.up.railway.app';
 
   // Loan options data
   const loanOptions = [

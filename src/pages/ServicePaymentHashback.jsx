@@ -14,7 +14,7 @@ function ServicePaymentHashback() {
   const paymentCompletedRef = useRef(false); // Prevent duplicate success messages
 
   // Your published backend URL
-  const BACKEND_URL = 'https://hash-back-server-production-2010.up.railway.app';
+  const BACKEND_URL = 'https://hash-back-server-production.up.railway.app';
 
   useEffect(() => {
     const storedData = localStorage.getItem('crbCheckData');
@@ -44,7 +44,7 @@ function ServicePaymentHashback() {
         wsRef.current.close();
       }
       
-      wsRef.current = new WebSocket('wss://hash-back-server-production-2010.up.railway.app');
+      wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
       
       wsRef.current.onopen = () => {
         console.log('WebSocket connected');
