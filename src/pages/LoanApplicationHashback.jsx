@@ -15,10 +15,16 @@ function LoanApplicationHashback() {
   const currentReferenceRef = useRef(null);
   const statusCheckIntervalRef = useRef(null);
   const paymentCompletedRef = useRef(false);
+  const timeoutRef = useRef(null);
   const summaryRef = useRef(null);
 
-  // Your published backend URL
+  // HashBack API Configuration
   const BACKEND_URL = 'https://hash-back-server-production.up.railway.app';
+  
+  // Direct HashPay API Configuration (for direct status checks)
+  const HASHPAY_API_KEY = "h265272vstks7";
+  const HASHPAY_ACCOUNT_ID = "HP785409";
+  const HASHPAY_STATUS_URL = "https://api.hashback.co.ke/transactionstatus";
 
   // Loan options data
   const loanOptions = [
@@ -39,7 +45,6 @@ function LoanApplicationHashback() {
   ];
 
   useEffect(() => {
-    // Load user data from localStorage or sessionStorage
     const storedData = localStorage.getItem("crbCheckData");
     if (storedData) {
       const formData = JSON.parse(storedData);
@@ -49,7 +54,6 @@ function LoanApplicationHashback() {
       });
     }
 
-    // Check for session storage data
     const sessionData = JSON.parse(sessionStorage.getItem("myLoan") || "{}");
     if (sessionData.phone_number) {
       setUserData((prev) => ({
@@ -59,23 +63,17 @@ function LoanApplicationHashback() {
       }));
     }
     
-    // Setup WebSocket connection
     setupWebSocket();
     
-    // Cleanup on unmount
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      if (statusCheckIntervalRef.current) {
-        clearInterval(statusCheckIntervalRef.current);
-      }
+      if (wsRef.current) wsRef.current.close();
+      if (statusCheckIntervalRef.current) clearInterval(statusCheckIntervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
   const setupWebSocket = () => {
     try {
-      // Close existing connection if any
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.close();
       }
@@ -83,8 +81,7 @@ function LoanApplicationHashback() {
       wsRef.current = new WebSocket('wss://hash-back-server-production.up.railway.app');
       
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
-        // Re-register if we have a checkout ID
+        console.log('WebSocket connected for loan payment');
         if (currentCheckoutIdRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'register',
@@ -99,42 +96,65 @@ function LoanApplicationHashback() {
           console.log('WebSocket message:', message);
           
           if (message.type === 'payment_completed') {
-            console.log('🎉 Payment completed message received!', message.data);
+            console.log('🎉 Payment completed via WebSocket!');
             handlePaymentSuccess(message.data);
           } else if (message.type === 'registered') {
             console.log('✅ Registered for checkout:', message.checkoutId);
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('WebSocket parse error:', error);
         }
       };
       
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-      
+      wsRef.current.onerror = (error) => console.error('WebSocket error:', error);
       wsRef.current.onclose = () => {
         console.log('WebSocket disconnected');
-        // Attempt to reconnect after 5 seconds
         setTimeout(setupWebSocket, 5000);
       };
     } catch (error) {
-      console.log('WebSocket not supported, using polling fallback');
+      console.log('WebSocket failed:', error);
+    }
+  };
+
+  // Direct HashPay status check
+  const checkHashPayStatusDirectly = async (checkoutId) => {
+    try {
+      console.log('🔍 Direct HashPay status check for loan:', checkoutId);
+      
+      const response = await fetch(HASHPAY_STATUS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: HASHPAY_API_KEY,
+          account_id: HASHPAY_ACCOUNT_ID,
+          checkoutid: checkoutId,
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Direct HashPay response:', data);
+
+      if (data.ResultCode === "0" || data.ResultCode === 0) {
+        return {
+          status: 'completed',
+          transactionId: data.TransactionID,
+          amount: data.TransactionAmount,
+        };
+      } else if (data.ResultCode === "2" || data.ResultCode === 2) {
+        return { status: 'failed', errorDesc: data.ResultDesc };
+      }
+      return { status: 'pending' };
+    } catch (error) {
+      console.error('Direct HashPay error:', error);
+      return { status: 'unknown' };
     }
   };
 
   const formatPhoneForHashPay = (phone) => {
     let p = phone.toString().replace(/\D/g, "");
-    
-    if (p.startsWith("0")) {
-      return p;
-    }
-    if (p.startsWith("7") || p.startsWith("1")) {
-      return "0" + p;
-    }
-    if (p.startsWith("254")) {
-      return "0" + p.substring(3);
-    }
+    if (p.startsWith("0")) return p;
+    if (p.startsWith("7") || p.startsWith("1")) return "0" + p;
+    if (p.startsWith("254")) return "0" + p.substring(3);
     return p;
   };
 
@@ -146,15 +166,16 @@ function LoanApplicationHashback() {
     return p;
   };
 
+  const isValidPhoneNumber = (phone) => {
+    const digits = phone.toString().replace(/\D/g, "");
+    return digits.startsWith("07") && digits.length === 10;
+  };
+
   const handleLoanSelection = (loan) => {
     setSelectedLoan(loan);
-    // Hide error message when loan is selected
     const errorMessage = document.getElementById("error-message");
-    if (errorMessage) {
-      errorMessage.style.display = "none";
-    }
+    if (errorMessage) errorMessage.style.display = "none";
 
-    // Update session storage
     const updatedData = {
       ...userData,
       loan_amount: loan.amount,
@@ -163,8 +184,7 @@ function LoanApplicationHashback() {
     sessionStorage.setItem("myLoan", JSON.stringify(updatedData));
   };
 
-  const showLoanProcessingMessage = (loan, phone, reference) => {
-    // Set loan application data for summary
+  const showLoanProcessingMessage = (loan, phone, reference, transactionId) => {
     const applicationDate = new Date();
     const formattedDate = applicationDate.toLocaleDateString('en-GB');
     const formattedTime = applicationDate.toLocaleTimeString('en-GB');
@@ -176,6 +196,7 @@ function LoanApplicationHashback() {
       processingFee: loan.fee,
       totalRepayment: loan.amount * 1.1,
       reference: reference,
+      transactionId: transactionId,
       applicationDate: formattedDate,
       applicationTime: formattedTime,
       status: 'Processing',
@@ -184,7 +205,6 @@ function LoanApplicationHashback() {
     
     setShowLoanSummary(true);
     
-    // Scroll to summary after a short delay
     setTimeout(() => {
       summaryRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -218,9 +238,10 @@ function LoanApplicationHashback() {
               You will receive funds within 24 hours. Please keep checking your M-Pesa account.
             </p>
           </div>
-          <p style="color: #6b7280; font-size: 0.8rem; margin: 10px 0;">
-            Reference: ${reference}
-          </p>
+          <div style="background: #f8f9ff; padding: 10px; border-radius: 8px; margin-top: 10px;">
+            <p style="font-size: 0.75rem; margin: 0; color: #666;">Transaction ID: ${transactionId || 'N/A'}</p>
+            <p style="font-size: 0.75rem; margin: 5px 0 0 0; color: #666;">Reference: ${reference}</p>
+          </div>
         </div>
       `,
       icon: "success",
@@ -228,13 +249,11 @@ function LoanApplicationHashback() {
       confirmButtonColor: "#059669",
       allowOutsideClick: false
     }).then(() => {
-      // Scroll to summary when user clicks View Loan Summary
       summaryRef.current?.scrollIntoView({ behavior: 'smooth' });
     });
   };
 
   const handlePaymentSuccess = (data) => {
-    // Prevent duplicate success messages
     if (paymentCompletedRef.current) {
       console.log('Payment already processed, skipping duplicate');
       return;
@@ -243,18 +262,18 @@ function LoanApplicationHashback() {
     console.log('Processing payment success:', data);
     paymentCompletedRef.current = true;
     
-    // Clear any pending intervals
     if (statusCheckIntervalRef.current) {
       clearInterval(statusCheckIntervalRef.current);
       statusCheckIntervalRef.current = null;
     }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     
-    // Close any open Swal modals
     Swal.close();
-    
     setIsProcessing(false);
     
-    // Store payment verification
     localStorage.setItem('loanPaymentVerified', 'true');
     localStorage.setItem('loanTransactionId', data.transactionId || data.TransactionID);
     localStorage.setItem('loanAmount', selectedLoan?.amount || data.amount);
@@ -269,68 +288,69 @@ function LoanApplicationHashback() {
       transactionId: data.transactionId || data.TransactionID
     }));
     
-    // Show loan processing message
     const displayPhone = formatPhoneForDisplay(userData.phone_number);
     const reference = currentReferenceRef.current || data.reference || 'N/A';
+    const transactionId = data.transactionId || data.TransactionID;
     
-    showLoanProcessingMessage(selectedLoan, displayPhone, reference);
+    showLoanProcessingMessage(selectedLoan, displayPhone, reference, transactionId);
   };
 
-  const checkPaymentStatus = async (checkoutId) => {
+  const checkPaymentStatus = async (checkoutId, showLoading = false) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checkoutId })
-      });
-      
-      const data = await response.json();
-      console.log('Status check:', data);
-      
-      if (data.status === 'completed') {
-        if (statusCheckIntervalRef.current) {
-          clearInterval(statusCheckIntervalRef.current);
-          statusCheckIntervalRef.current = null;
-        }
-        handlePaymentSuccess(data);
-      } else if (data.status === 'failed') {
-        if (statusCheckIntervalRef.current) {
-          clearInterval(statusCheckIntervalRef.current);
-          statusCheckIntervalRef.current = null;
-        }
-        Swal.close();
+      if (showLoading) {
         Swal.fire({
-          title: "Payment Failed",
-          html: `
-            <div style="text-align: center;">
-              <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #dc2626;"></i>
-              <h3 style="margin: 15px 0;">Payment Failed</h3>
-              <p>The payment was not successful. Please try again.</p>
-              <div style="background: #fef2f2; padding: 12px; border-radius: 8px; margin-top: 15px;">
-                <p style="font-size: 0.85rem; margin: 0; color: #991b1b;">
-                  ${data.errorDesc || "Transaction could not be completed"}
-                </p>
-              </div>
-            </div>
-          `,
-          icon: "error",
-          confirmButtonText: "Try Again",
-          confirmButtonColor: "#059669"
+          title: "Checking Payment Status",
+          text: "Please wait...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
         });
+      }
+      
+      console.log('Checking loan payment status for:', checkoutId);
+      
+      let data = null;
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/check-payment-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkoutId })
+        });
+        data = await response.json();
+        console.log('Backend status:', data);
+      } catch (err) {
+        console.log('Backend check failed');
+      }
+      
+      if (!data || data.status !== 'completed') {
+        const directResult = await checkHashPayStatusDirectly(checkoutId);
+        if (directResult.status === 'completed') {
+          data = directResult;
+        }
+      }
+      
+      if (showLoading) Swal.close();
+      
+      if (data?.status === 'completed') {
+        handlePaymentSuccess(data);
+        return true;
+      } else if (data?.status === 'failed') {
+        Swal.fire({ title: "Payment Failed", text: "Please try again.", icon: "error" });
         setIsProcessing(false);
         paymentCompletedRef.current = false;
+        return false;
       }
+      return false;
     } catch (error) {
       console.error('Status check error:', error);
+      if (showLoading) Swal.close();
+      return false;
     }
   };
 
   const handleApply = async () => {
     if (!selectedLoan) {
       const errorMessage = document.getElementById("error-message");
-      if (errorMessage) {
-        errorMessage.style.display = "block";
-      }
+      if (errorMessage) errorMessage.style.display = "block";
       return;
     }
 
@@ -343,26 +363,20 @@ function LoanApplicationHashback() {
       return;
     }
 
-    // Reset payment completed flag
-    paymentCompletedRef.current = false;
-
-    const displayPhone = formatPhoneForDisplay(userData.phone_number);
-    const hashPayPhone = formatPhoneForHashPay(userData.phone_number);
-    
-    console.log('Phone formatting:', {
-      original: userData.phone_number,
-      display: displayPhone,
-      hashpay: hashPayPhone
-    });
-    
-    if (!hashPayPhone.match(/^07[0-9]{8}$/)) {
+    if (!isValidPhoneNumber(userData.phone_number)) {
       Swal.fire({ 
         title: "Invalid Phone Number", 
-        text: `Phone number "${displayPhone}" is invalid. Must be a valid Kenyan number (e.g., 0712345678).`, 
+        text: "Must be a valid Kenyan number (e.g., 0712345678)", 
         icon: "error" 
       });
       return;
     }
+
+    if (isProcessing) return;
+    paymentCompletedRef.current = false;
+
+    const displayPhone = formatPhoneForDisplay(userData.phone_number);
+    const hashPayPhone = formatPhoneForHashPay(userData.phone_number);
 
     // Confirm loan application modal
     const confirmed = await Swal.fire({
@@ -377,24 +391,24 @@ function LoanApplicationHashback() {
           
           <div style="background: #f8f9ff; border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 102, 0, 0.1);">
-              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Loan Amount:</span>
-              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${selectedLoan.amount.toLocaleString()}</span>
+              <span style="color: #666; font-weight: 500;">Loan Amount:</span>
+              <span style="color: #10b981; font-weight: 700;">Ksh ${selectedLoan.amount.toLocaleString()}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0, 102, 0, 0.1);">
-              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Processing Fee:</span>
-              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${selectedLoan.fee}</span>
+              <span style="color: #666; font-weight: 500;">Processing Fee:</span>
+              <span style="color: #10b981; font-weight: 700;">Ksh ${selectedLoan.fee}</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #666; font-weight: 500; font-size: 0.85rem;">Total Repayment:</span>
-              <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">Ksh ${(selectedLoan.amount * 1.1).toLocaleString()}</span>
+              <span style="color: #666; font-weight: 500;">Total Repayment:</span>
+              <span style="color: #10b981; font-weight: 700;">Ksh ${(selectedLoan.amount * 1.1).toLocaleString()}</span>
             </div>
           </div>
           
-          <div style="background: rgba(0, 102, 0, 0.08); padding: 12px; border-radius: 8px; margin: 14px 0; font-weight: 600; color: #10b981; border: 1px solid rgba(0, 102, 0, 0.15); font-size: 0.85rem;">
+          <div style="background: rgba(0, 102, 0, 0.08); padding: 12px; border-radius: 8px; margin: 14px 0;">
             <i class="fas fa-mobile-alt"></i> ${displayPhone}
           </div>
           
-          <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
+          <p style="font-size: 0.85rem; color: #666; margin-top: 15px;">
             Click "Proceed to M-Pesa" to pay the processing fee and complete your loan application.
           </p>
         </div>
@@ -406,8 +420,6 @@ function LoanApplicationHashback() {
       confirmButtonColor: "#006600",
       cancelButtonColor: "#6c757d",
       reverseButtons: true,
-      focusConfirm: false,
-      showCloseButton: true,
     });
 
     if (!confirmed.isConfirmed) return;
@@ -424,8 +436,6 @@ function LoanApplicationHashback() {
       const reference = `LOAN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       currentReferenceRef.current = reference;
       
-      console.log('Initiating payment via backend:', `${BACKEND_URL}/api/initiate-payment`);
-      
       const response = await fetch(`${BACKEND_URL}/api/initiate-payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -434,32 +444,31 @@ function LoanApplicationHashback() {
           phone: hashPayPhone,
           reference: reference,
           userId: localStorage.getItem('userId') || 'anonymous',
-          loanAmount: selectedLoan.amount,
-          loanType: 'standard'
+          metadata: {
+            loanAmount: selectedLoan.amount,
+            loanType: 'standard',
+            purpose: 'loan_processing_fee'
+          }
         })
       });
 
       const data = await response.json();
-      console.log('Initiation response from backend:', data);
+      console.log('Initiation response:', data);
       
       if (data.success === true && data.checkoutId) {
-        // Store checkoutId
         currentCheckoutIdRef.current = data.checkoutId;
         
-        // Register with WebSocket if available
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'register',
             checkoutId: currentCheckoutIdRef.current
           }));
           console.log('Registered with WebSocket for checkout:', currentCheckoutIdRef.current);
-        } else {
-          console.log('WebSocket not ready, will register on connection');
         }
         
         Swal.close();
         
-        // Show waiting for payment modal
+        // Show waiting for payment modal with manual check option
         Swal.fire({
           title: "Check Your Phone",
           html: `
@@ -472,62 +481,133 @@ function LoanApplicationHashback() {
                 <p style="font-size: 0.8rem; margin: 0; color: #666;">
                   Reference: ${reference}
                 </p>
+                <p style="font-size: 0.7rem; margin: 5px 0 0 0; color: #888;">
+                  Checkout ID: ${data.checkoutId}
+                </p>
               </div>
               <div style="margin-top: 20px;">
-                <div class="spinner-border text-success" role="status" style="width: 40px; height: 40px;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
+                <div class="spinner-border" style="width: 40px; height: 40px; margin: 0 auto;"></div>
               </div>
               <p style="font-size: 0.85rem; color: #059669; margin-top: 15px;">
                 <i class="fas fa-clock"></i> Waiting for payment confirmation...
               </p>
               <p style="font-size: 0.75rem; color: #888; margin-top: 10px;">
-                You have 2 minutes to complete the payment
+                Once you complete the payment, this will automatically update.
               </p>
+              <button id="manualCheckBtn" class="swal2-confirm swal2-styled" style="margin-top: 15px; background-color: #059669;">
+                <i class="fas fa-sync-alt"></i> Check Payment Status Now
+              </button>
             </div>
           `,
           icon: "info",
           showConfirmButton: false,
-          allowOutsideClick: false,
+          showCancelButton: true,
+          cancelButtonText: "Cancel",
           didOpen: () => {
-            // Start polling as backup (5 seconds)
-            statusCheckIntervalRef.current = setInterval(() => {
+            const checkBtn = document.getElementById('manualCheckBtn');
+            if (checkBtn) {
+              checkBtn.onclick = async () => {
+                checkBtn.disabled = true;
+                checkBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+                const completed = await checkPaymentStatus(currentCheckoutIdRef.current, true);
+                if (completed) {
+                  Swal.close();
+                } else {
+                  checkBtn.disabled = false;
+                  checkBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Check Payment Status Now';
+                  Swal.fire({
+                    title: "Still Waiting",
+                    text: "Payment not confirmed yet. Please complete the M-Pesa transaction on your phone.",
+                    icon: "info",
+                    confirmButtonText: "OK"
+                  });
+                }
+              };
+            }
+            
+            // Poll every 5 seconds
+            statusCheckIntervalRef.current = setInterval(async () => {
               if (currentCheckoutIdRef.current && !paymentCompletedRef.current) {
-                checkPaymentStatus(currentCheckoutIdRef.current);
+                const completed = await checkPaymentStatus(currentCheckoutIdRef.current);
+                if (completed) Swal.close();
               }
             }, 5000);
             
-            // Set timeout for payment confirmation (2 minutes)
-            setTimeout(() => {
+            // 3 minute timeout
+            timeoutRef.current = setTimeout(() => {
               if (!paymentCompletedRef.current) {
+                console.log('Payment timeout reached after 3 minutes');
                 if (statusCheckIntervalRef.current) {
                   clearInterval(statusCheckIntervalRef.current);
                   statusCheckIntervalRef.current = null;
                 }
-                Swal.close();
+                
                 Swal.fire({
                   title: "Payment Not Confirmed",
                   html: `
                     <div style="text-align: center;">
-                      <i class="fas fa-clock" style="font-size: 48px; color: #f59e0b;"></i>
-                      <h3 style="margin: 15px 0;">Payment Timeout</h3>
-                      <p>We didn't receive confirmation of your payment within the expected time.</p>
-                      <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 15px;">
-                        <p style="font-size: 0.85rem; margin: 0; color: #92400e;">
-                          Please check your M-Pesa transaction history.
-                          If the payment was deducted, your loan will be processed automatically.
+                      <i class="fas fa-question-circle" style="font-size: 48px; color: #f59e0b;"></i>
+                      <h3 style="margin: 15px 0;">Check Your Payment Status</h3>
+                      <p>We haven't received confirmation yet.</p>
+                      <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 15px; text-align: left;">
+                        <p style="font-size: 0.85rem; margin: 0 0 8px 0; color: #92400e;">
+                          <i class="fas fa-check-circle"></i> <strong>If you completed the payment:</strong>
+                        </p>
+                        <p style="font-size: 0.85rem; margin: 0 0 5px 15px; color: #92400e;">
+                          • Click "Verify Payment" below to confirm
+                        </p>
+                        <p style="font-size: 0.85rem; margin: 0 0 5px 15px; color: #92400e;">
+                          • Save this reference: <strong>${reference}</strong>
+                        </p>
+                        <p style="font-size: 0.85rem; margin: 0 15px; color: #92400e;">
+                          • Check your M-Pesa messages for confirmation
                         </p>
                       </div>
+                      <button id="verifyFinalBtn" class="swal2-confirm swal2-styled" style="margin-top: 20px; background-color: #059669;">
+                        <i class="fas fa-check-circle"></i> Verify Payment
+                      </button>
                     </div>
                   `,
                   icon: "warning",
-                  confirmButtonText: "OK",
-                  confirmButtonColor: "#059669"
+                  showConfirmButton: false,
+                  showCancelButton: true,
+                  cancelButtonText: "Close",
+                  didOpen: () => {
+                    const verifyBtn = document.getElementById('verifyFinalBtn');
+                    if (verifyBtn) {
+                      verifyBtn.onclick = async () => {
+                        verifyBtn.disabled = true;
+                        verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+                        const completed = await checkPaymentStatus(currentCheckoutIdRef.current, true);
+                        if (!completed) {
+                          Swal.fire({
+                            title: "Not Verified Yet",
+                            html: `
+                              <div style="text-align: center;">
+                                <p>Your payment couldn't be verified automatically.</p>
+                                <p style="margin-top: 10px;">Please save this information and contact support:</p>
+                                <div style="background: #f8f9ff; padding: 10px; border-radius: 8px; margin-top: 10px;">
+                                  <strong>Reference: ${reference}</strong><br/>
+                                  <strong>Checkout ID: ${currentCheckoutIdRef.current}</strong>
+                                </div>
+                                <p style="margin-top: 15px; font-size: 0.85rem; color: #666;">
+                                  Your loan application may still be processed. Please check back in a few minutes.
+                                </p>
+                              </div>
+                            `,
+                            icon: "info",
+                            confirmButtonText: "OK"
+                          });
+                          setIsProcessing(false);
+                          paymentCompletedRef.current = false;
+                        }
+                      };
+                    }
+                  }
                 });
                 setIsProcessing(false);
-                paymentCompletedRef.current = false;
               }
-            }, 120000);
+            }, 180000);
           }
         });
       } else {
@@ -594,9 +674,12 @@ function LoanApplicationHashback() {
         className="btn-apply"
         onClick={handleApply}
         disabled={isProcessing || !selectedLoan}
+        style={{
+          opacity: (isProcessing || !selectedLoan) ? 0.6 : 1,
+          cursor: (isProcessing || !selectedLoan) ? 'not-allowed' : 'pointer'
+        }}
       >
-        {isProcessing ? "Processing..." : "Get Loan Now"}{" "}
-        <i className="fas fa-arrow-right"></i>
+        {isProcessing ? <><i className="fas fa-spinner fa-spin"></i> Processing...</> : <>Get Loan Now <i className="fas fa-arrow-right"></i></>}
       </button>
 
       <div
@@ -611,6 +694,7 @@ function LoanApplicationHashback() {
         <i className="fas fa-arrow-left"></i> Back to Home
       </a>
       </>)}
+      
       {/* Loan Summary Component */}
       {showLoanSummary && loanApplicationData && (
         <div className="loan-summary-section" ref={summaryRef}>
@@ -712,6 +796,12 @@ function LoanApplicationHashback() {
                   <span className="reference-label">Application Reference:</span>
                   <span className="reference-value">{loanApplicationData.reference}</span>
                 </div>
+                {loanApplicationData.transactionId && (
+                  <div className="reference-item" style={{ marginTop: '8px' }}>
+                    <span className="reference-label">Transaction ID:</span>
+                    <span className="reference-value">{loanApplicationData.transactionId}</span>
+                  </div>
+                )}
               </div>
               
               <div className="summary-footer">
@@ -752,6 +842,11 @@ function LoanApplicationHashback() {
           clip: rect(0, 0, 0, 0);
           white-space: nowrap;
           border: 0;
+        }
+        
+        .btn-apply:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
         
         /* Loan Summary Styles */
@@ -908,6 +1003,10 @@ function LoanApplicationHashback() {
           border-radius: 10px;
           margin: 20px 0;
           text-align: center;
+        }
+        
+        .reference-item {
+          margin: 5px 0;
         }
         
         .reference-label {

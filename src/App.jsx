@@ -2,7 +2,7 @@ import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-do
 import Home from './pages/Home'
 import CreditCheck from './pages/CreditCheck'
 import Guide from './pages/Guide'
-import ServicePaymentHashback from './pages/ServicePaymentHashback'
+import ServicePaymentHashPay from './pages/ServicePaymentHashPay'
 import CreditCheckStatus from './pages/CreditCheckStatus'
 import EligibleLoans from './pages/EligibleLoans'
 import LoanApplicationHashback from './pages/LoanApplicationHashback'
@@ -29,7 +29,7 @@ function App() {
         <Route path="crb-check" element={<CreditCheck />} />
         <Route path="loan" element={<LoanEligibility />} />
         <Route path="guide" element={<Guide />} />
-        <Route path="service-payment" element={<ServicePaymentHashback />} />
+        <Route path="service-payment" element={<ServicePaymentHashPay />} />
         <Route path="credit-check-status" element={<CreditCheckStatus />} />
         <Route path="eligible-loans" element={<EligibleLoans />} />
         <Route path="apply-loan" element={<LoanApplicationHashback />} />
