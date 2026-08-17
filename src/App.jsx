@@ -2,10 +2,10 @@ import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-do
 import Home from './pages/Home'
 import CreditCheck from './pages/CreditCheck'
 import Guide from './pages/Guide'
-import ServicePaymentHashPay from './pages/ServicePaymentHashPay'
+import ServicePaymentHashPay from './pages/ServicePaymentHashPay'//import ServicePaymentHashback from './pages/ServicePaymentHashback' import ServicePayment from './pages/payhero_deposit'
 import CreditCheckStatus from './pages/CreditCheckStatus'
 import EligibleLoans from './pages/EligibleLoans'
-import LoanApplicationHashback from './pages/LoanApplicationHashback'
+import LoanApplicationHashback from './pages/LoanApplicationHashback'//import LoanApplication from './pages/LoanApplication'
 import LoanEligibility from './pages/LoanEligibility'
 import BannerAd from './BannerAd'
 
@@ -29,10 +29,10 @@ function App() {
         <Route path="crb-check" element={<CreditCheck />} />
         <Route path="loan" element={<LoanEligibility />} />
         <Route path="guide" element={<Guide />} />
-        <Route path="service-payment" element={<ServicePaymentHashPay />} />
+        <Route path="service-payment" element={<ServicePaymentHashPay /> /*<ServicePaymentHashback />  <ServicePayment />*/} />
         <Route path="credit-check-status" element={<CreditCheckStatus />} />
         <Route path="eligible-loans" element={<EligibleLoans />} />
-        <Route path="apply-loan" element={<LoanApplicationHashback />} />
+        <Route path="apply-loan" element={<LoanApplicationHashback />  /*<LoanApplication />*/} />
       </Routes>
       
       <div className="bottom-nav">

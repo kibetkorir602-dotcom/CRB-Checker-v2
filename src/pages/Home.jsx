@@ -5,6 +5,15 @@ import Banner from '../assets/banner.png'
 function Home() {
   const navigate = useNavigate();
 
+  // Navigation functions
+  const scrollToChecker = () => {
+    checkerRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+    
+  const scrollToLoanApps = () => {
+    loanAppsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div>
       {/* Hero Section */}
@@ -19,7 +28,7 @@ function Home() {
               </button>
             </div>
             <div className="hero-image">
-              <img src={Banner} alt="Financial Services in Kenya" />
+              <img src={Banner/*https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80*/} alt="Financial Services in Kenya" />
             </div>
           </div>
         </div>
@@ -76,6 +85,7 @@ function Home() {
               </div>
               <h3>Creditinfo Kenya</h3>
               <p>One of the leading CRBs in Kenya providing comprehensive credit information and risk management solutions.</p>
+              {/*<p><strong>USSD Code:</strong> *433#</p>*/}
             </div>
             
             <div className="crb-card">
@@ -84,6 +94,7 @@ function Home() {
               </div>
               <h3>Metropol CRB</h3>
               <p>Provides credit reports, scores and certificates. Popular for SME and individual credit assessments.</p>
+              {/*<p><strong>USSD Code:</strong> *433#</p>*/}
             </div>
             
             <div className="crb-card">
@@ -92,6 +103,7 @@ function Home() {
               </div>
               <h3>TransUnion Kenya</h3>
               <p>Global credit bureau with local presence in Kenya, offering credit information and analytics services.</p>
+              {/*<p><strong>USSD Code:</strong> *433#</p>*/}
             </div>
           </div>
         </div>

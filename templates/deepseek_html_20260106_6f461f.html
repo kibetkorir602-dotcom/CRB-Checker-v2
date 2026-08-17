@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CreditCheck Kenya | Credit Reference Bureau & Loan Services</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #1abc9c;
+            --light: #f8f9fa;
+            --dark: #2c3e50;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --gray: #95a5a6;
+            --kenya-green: #006600;
+            --kenya-red: #BB0000;
+            --kenya-black: #000000;
+            --kenya-white: #FFFFFF;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* Header Styles */
+        header {
+            background-color: white;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            color: var(--kenya-green);
+            font-size: 28px;
+        }
+
+        .logo h1 {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        .logo span {
+            color: var(--kenya-green);
+        }
+
+        .kenya-flag {
+            display: inline-block;
+            width: 24px;
+            height: 16px;
+            background: linear-gradient(to bottom, 
+                var(--kenya-black) 0%, 
+                var(--kenya-black) 33%, 
+                var(--kenya-red) 33%, 
+                var(--kenya-red) 66%, 
+                var(--kenya-green) 66%, 
+                var(--kenya-green) 100%);
+            margin-left: 5px;
+            border-radius: 2px;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--kenya-green);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 15px;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--kenya-green);
+            color: var(--kenya-green);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--kenya-green);
+            color: white;
+        }
+
+        .btn-primary {
+            background-color: var(--kenya-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #004d00;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #2980b9;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .hero-text h2 {
+            font-size: 42px;
+            color: var(--primary);
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .hero-text p {
+            font-size: 18px;
+            color: var(--gray);
+            margin-bottom: 30px;
+        }
+
+        .hero-image {
+            text-align: center;
+        }
+
+        .hero-image img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Checker Section */
+        .checker-section {
+            padding: 80px 0;
+            background-color: white;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .section-title h2 {
+            font-size: 36px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .section-title p {
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .checker-form {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--kenya-green);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .disclaimer {
+            font-size: 14px;
+            color: var(--gray);
+            max-width: 60%;
+        }
+
+        /* CRB Options Section */
+        .crb-options {
+            padding: 60px 0;
+            background-color: #f8f9fa;
+        }
+
+        .crb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .crb-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+            text-align: center;
+        }
+
+        .crb-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .crb-icon {
+            width: 70px;
+            height: 70px;
+            background-color: rgba(0, 102, 0, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .crb-icon i {
+            font-size: 28px;
+            color: var(--kenya-green);
+        }
+
+        .crb-card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .crb-card p {
+            color: var(--gray);
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        /* Results Section */
+        .results-section {
+            padding: 80px 0;
+            background-color: #f8f9fa;
+        }
+
+        .results-card {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-header h3 {
+            color: var(--primary);
+            font-size: 28px;
+        }
+
+        .result-status {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-clear {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success);
+        }
+
+        .status-flagged {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+        }
+
+        .status-warning {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: var(--warning);
+        }
+
+        .results-details {
+            margin-bottom: 30px;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .detail-label {
+            width: 200px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .detail-value {
+            flex: 1;
+        }
+
+        .verification-date {
+            text-align: center;
+            color: var(--gray);
+            font-style: italic;
+            margin-top: 30px;
+        }
+
+        /* Loan Apps Section */
+        .loan-apps-section {
+            padding: 80px 0;
+            background-color: white;
+        }
+
+        .loan-apps-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .loan-app-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+            border-left: 4px solid var(--kenya-green);
+        }
+
+        .loan-app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .loan-app-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .loan-app-icon {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 102, 0, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+        }
+
+        .loan-app-icon i {
+            font-size: 24px;
+            color: var(--kenya-green);
+        }
+
+        .loan-app-info h3 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .loan-app-info p {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .loan-app-details {
+            margin-bottom: 25px;
+        }
+
+        .loan-app-details p {
+            color: var(--dark);
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .eligibility {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .eligibility i {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .eligibility.eligible i {
+            color: var(--success);
+        }
+
+        .eligibility.not-eligible i {
+            color: var(--danger);
+        }
+
+        .loan-app-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .loan-app-rating {
+            display: flex;
+            align-items: center;
+            color: var(--warning);
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 80px 0;
+            background-color: #f8f9fa;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            background-color: rgba(0, 102, 0, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon i {
+            font-size: 28px;
+            color: var(--kenya-green);
+        }
+
+        .feature-card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: var(--gray);
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--primary);
+            color: white;
+            padding: 60px 0 30px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-column h3 {
+            font-size: 20px;
+            margin-bottom: 25px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .footer-column h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background-color: var(--kenya-green);
+        }
+
+        .footer-column ul {
+            list-style: none;
+        }
+
+        .footer-column ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer-column ul li a {
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-column ul li a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #bdc3c7;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            
+            .loan-apps-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            nav ul {
+                gap: 15px;
+            }
+            
+            .hero-text h2 {
+                font-size: 32px;
+            }
+            
+            .checker-form {
+                padding: 25px;
+            }
+            
+            .form-footer {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .disclaimer {
+                max-width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-credit-card"></i>
+                    <h1>CreditCheck <span>Kenya</span></h1>
+                    <div class="kenya-flag" title="Kenya"></div>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#checker">CRB Check</a></li>
+                        <li><a href="#crb-options">CRB Bureaus</a></li>
+                        <li><a href="#loan-apps">Loan Apps</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </nav>
+                <div class="auth-buttons">
+                    <button class="btn btn-outline">Log In</button>
+                    <button class="btn btn-primary">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h2>Check Your Credit Status with Kenya's CRB</h2>
+                    <p>CreditCheck Kenya helps you access your credit report from licensed Credit Reference Bureaus in Kenya. Check your credit score, get clearance certificates, and find loan options tailored to your financial profile.</p>
+                    <button class="btn btn-primary" onclick="scrollToChecker()">Check Credit Status <i class="fas fa-arrow-right"></i></button>
+                    <button class="btn btn-secondary" onclick="scrollToLoanApps()" style="margin-left: 10px;">View Loan Apps <i class="fas fa-mobile-alt"></i></button>
+                </div>
+                <div class="hero-image">
+                    <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Financial Services in Kenya">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Checker Section -->
+    <section class="checker-section" id="checker">
+        <div class="container">
+            <div class="section-title">
+                <h2>Check Your CRB Status</h2>
+                <p>Enter your details to check your credit status with Kenya's Credit Reference Bureaus. This is a simulated check for demonstration purposes.</p>
+            </div>
+            
+            <div class="checker-form">
+                <div class="form-group">
+                    <label for="fullName">Full Name *</label>
+                    <input type="text" id="fullName" class="form-control" placeholder="Enter your full name as per ID">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="idNumber">National ID / Passport Number *</label>
+                        <input type="text" id="idNumber" class="form-control" placeholder="Enter your ID or Passport Number">
+                    </div>
+                    <div class="form-group">
+                        <label for="phoneNumber">Phone Number *</label>
+                        <input type="text" id="phoneNumber" class="form-control" placeholder="e.g., 0712 345 678">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="emailAddress">Email Address *</label>
+                    <input type="email" id="emailAddress" class="form-control" placeholder="Enter your email address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="crbOption">Select CRB Bureau *</label>
+                    <select id="crbOption" class="form-control">
+                        <option value="">Select a Credit Reference Bureau</option>
+                        <option value="creditinfo">Creditinfo Kenya</option>
+                        <option value="metropol">Metropol Credit Reference Bureau</option>
+                        <option value="transunion">TransUnion Kenya</option>
+                    </select>
+                </div>
+                
+                <div class="form-footer">
+                    <div class="disclaimer">
+                        <i class="fas fa-lock"></i> Your information is secure and encrypted. This is a demonstration only.
+                    </div>
+                    <button class="btn btn-primary" onclick="performCRBCheck()">Check Credit Status <i class="fas fa-search"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CRB Options Section -->
+    <section class="crb-options" id="crb-options">
+        <div class="container">
+            <div class="section-title">
+                <h2>Licensed CRB Bureaus in Kenya</h2>
+                <p>These are the official Credit Reference Bureaus licensed by the Central Bank of Kenya (CBK)</p>
+            </div>
+            
+            <div class="crb-grid">
+                <div class="crb-card">
+                    <div class="crb-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h3>Creditinfo Kenya</h3>
+                    <p>One of the leading CRBs in Kenya providing comprehensive credit information and risk management solutions.</p>
+                    <p><strong>USSD Code:</strong> *433#</p>
+                </div>
+                
+                <div class="crb-card">
+                    <div class="crb-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Metropol CRB</h3>
+                    <p>Provides credit reports, scores and certificates. Popular for SME and individual credit assessments.</p>
+                    <p><strong>USSD Code:</strong> *433#</p>
+                </div>
+                
+                <div class="crb-card">
+                    <div class="crb-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>TransUnion Kenya</h3>
+                    <p>Global credit bureau with local presence in Kenya, offering credit information and analytics services.</p>
+                    <p><strong>USSD Code:</strong> *433#</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="results">
+        <div class="container">
+            <div class="section-title">
+                <h2>Your Credit Status Results</h2>
+                <p>Based on the information provided, here is your simulated credit status report.</p>
+            </div>
+            
+            <div class="results-card" id="resultsCard">
+                <div class="results-header">
+                    <h3>CRB Credit Report</h3>
+                    <div class="result-status status-clear" id="resultStatus">Good Standing</div>
+                </div>
+                
+                <div class="results-details">
+                    <div class="detail-row">
+                        <div class="detail-label">Full Name:</div>
+                        <div class="detail-value" id="resultName">John Mwangi</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">ID Number:</div>
+                        <div class="detail-value" id="resultID">12345678</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Phone Number:</div>
+                        <div class="detail-value" id="resultPhone">0712 345 678</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">CRB Bureau:</div>
+                        <div class="detail-value" id="resultCRB">Creditinfo Kenya</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Credit Score:</div>
+                        <div class="detail-value" id="resultScore">725/900 (Good)</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Status:</div>
+                        <div class="detail-value"><span id="statusText">No negative listings - Eligible for credit</span></div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Active Loans:</div>
+                        <div class="detail-value" id="resultLoans">2 active loans (KSh 85,000 total)</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Payment History:</div>
+                        <div class="detail-value" id="resultHistory">97% on-time payments</div>
+                    </div>
+                </div>
+                
+                <div class="verification-date">
+                    <i class="far fa-calendar-alt"></i> Report generated on: <span id="verificationDate">24/10/2023</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loan Apps Section -->
+    <section class="loan-apps-section" id="loan-apps">
+        <div class="container">
+            <div class="section-title">
+                <h2>Popular Loan Apps in Kenya</h2>
+                <p>Based on your credit status, here are loan options you may be eligible for.</p>
+            </div>
+            
+            <div class="loan-apps-grid">
+                <!-- Tala -->
+                <div class="loan-app-card">
+                    <div class="loan-app-header">
+                        <div class="loan-app-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="loan-app-info">
+                            <h3>Tala</h3>
+                            <p>Fast, unsecured loans with growing limits</p>
+                        </div>
+                    </div>
+                    <div class="loan-app-details">
+                        <p><i class="fas fa-money-bill-wave"></i> <strong>Loan Limit:</strong> KSh 500 - KSh 50,000</p>
+                        <p><i class="fas fa-percentage"></i> <strong>Interest Rate:</strong> 15% - 30% p.a.</p>
+                        <p><i class="fas fa-clock"></i> <strong>Disbursement:</strong> Within minutes</p>
+                    </div>
+                    <div class="eligibility eligible">
+                        <i class="fas fa-check-circle"></i>
+                        <span>You are eligible for this loan app</span>
+                    </div>
+                    <div class="loan-app-actions">
+                        <div class="loan-app-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                            <span style="margin-left: 5px; color: var(--gray);">4.5</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="applyForLoan('Tala')">Apply Now</button>
+                    </div>
+                </div>
+                
+                <!-- Branch -->
+                <div class="loan-app-card">
+                    <div class="loan-app-header">
+                        <div class="loan-app-icon">
+                            <i class="fas fa-code-branch"></i>
+                        </div>
+                        <div class="loan-app-info">
+                            <h3>Branch</h3>
+                            <p>Personal loans through simple, paperless process</p>
+                        </div>
+                    </div>
+                    <div class="loan-app-details">
+                        <p><i class="fas fa-money-bill-wave"></i> <strong>Loan Limit:</strong> KSh 1,000 - KSh 70,000</p>
+                        <p><i class="fas fa-percentage"></i> <strong>Interest Rate:</strong> 14% - 28% p.a.</p>
+                        <p><i class="fas fa-clock"></i> <strong>Disbursement:</strong> Instant to M-Pesa</p>
+                    </div>
+                    <div class="eligibility eligible">
+                        <i class="fas fa-check-circle"></i>
+                        <span>You are eligible for this loan app</span>
+                    </div>
+                    <div class="loan-app-actions">
+                        <div class="loan-app-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="far fa-star"></i>
+                            <span style="margin-left: 5px; color: var(--gray);">4.0</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="applyForLoan('Branch')">Apply Now</button>
+                    </div>
+                </div>
+                
+                <!-- M-Pesa -->
+                <div class="loan-app-card">
+                    <div class="loan-app-header">
+                        <div class="loan-app-icon">
+                            <i class="fas fa-sim-card"></i>
+                        </div>
+                        <div class="loan-app-info">
+                            <h3>M-Pesa</h3>
+                            <p>Mobile money platform with lending services</p>
+                        </div>
+                    </div>
+                    <div class="loan-app-details">
+                        <p><i class="fas fa-money-bill-wave"></i> <strong>Loan Limit:</strong> KSh 100 - KSh 150,000</p>
+                        <p><i class="fas fa-percentage"></i> <strong>Interest Rate:</strong> 7.5% - 10% p.a.</p>
+                        <p><i class="fas fa-clock"></i> <strong>Disbursement:</strong> Instant to M-Pesa</p>
+                    </div>
+                    <div class="eligibility eligible">
+                        <i class="fas fa-check-circle"></i>
+                        <span>You are eligible for this loan app</span>
+                    </div>
+                    <div class="loan-app-actions">
+                        <div class="loan-app-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <span style="margin-left: 5px; color: var(--gray);">4.8</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="applyForLoan('M-Pesa')">Apply Now</button>
+                    </div>
+                </div>
+                
+                <!-- KCB Mobile -->
+                <div class="loan-app-card">
+                    <div class="loan-app-header">
+                        <div class="loan-app-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <div class="loan-app-info">
+                            <h3>KCB Mobile</h3>
+                            <p>Mobile banking app with integrated loan services</p>
+                        </div>
+                    </div>
+                    <div class="loan-app-details">
+                        <p><i class="fas fa-money-bill-wave"></i> <strong>Loan Limit:</strong> KSh 1,000 - KSh 1,000,000</p>
+                        <p><i class="fas fa-percentage"></i> <strong>Interest Rate:</strong> 8% - 15% p.a.</p>
+                        <p><i class="fas fa-clock"></i> <strong>Disbursement:</strong> Within 24 hours</p>
+                    </div>
+                    <div class="eligibility not-eligible">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Requires KCB bank account</span>
+                    </div>
+                    <div class="loan-app-actions">
+                        <div class="loan-app-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                            <span style="margin-left: 5px; color: var(--gray);">4.3</span>
+                        </div>
+                        <button class="btn btn-outline" onclick="applyForLoan('KCB Mobile')">Learn More</button>
+                    </div>
+                </div>
+                
+                <!-- Zenka -->
+                <div class="loan-app-card">
+                    <div class="loan-app-header">
+                        <div class="loan-app-icon">
+                            <i class="fas fa-wind"></i>
+                        </div>
+                        <div class="loan-app-info">
+                            <h3>Zenka</h3>
+                            <p>Flexible personal loans with quick disbursement</p>
+                        </div>
+                    </div>
+                    <div class="loan-app-details">
+                        <p><i class="fas fa-money-bill-wave"></i> <strong>Loan Limit:</strong> KSh 500 - KSh 30,000</p>
+                        <p><i class="fas fa-percentage"></i> <strong>Interest Rate:</strong> 9% - 30% p.a.</p>
+                        <p><i class="fas fa-clock"></i> <strong>Disbursement:</strong> Within 5 minutes</p>
+                    </div>
+                    <div class="eligibility eligible">
+                        <i class="fas fa-check-circle"></i>
+                        <span>You are eligible for this loan app</span>
+                    </div>
+                    <div class="loan-app-actions">
+                        <div class="loan-app-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="far fa-star"></i>
+                            <span style="margin-left: 5px; color: var(--gray);">4.1</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="applyForLoan('Zenka')">Apply Now</button>
+                    </div>
+                </div>
+                
+                <!-- Timiza -->
+                <div class="loan-app-card">
+                    <div class="loan-app-header">
+                        <div class="loan-app-icon">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <div class="loan-app-info">
+                            <h3>Timiza</h3>
+                            <p>Absa Bank mobile loan product</p>
+                        </div>
+                    </div>
+                    <div class="loan-app-details">
+                        <p><i class="fas fa-money-bill-wave"></i> <strong>Loan Limit:</strong> KSh 500 - KSh 300,000</p>
+                        <p><i class="fas fa-percentage"></i> <strong>Interest Rate:</strong> 7% - 12% p.a.</p>
+                        <p><i class="fas fa-clock"></i> <strong>Disbursement:</strong> Instant to M-Pesa</p>
+                    </div>
+                    <div class="eligibility not-eligible">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Requires Absa bank account</span>
+                    </div>
+                    <div class="loan-app-actions">
+                        <div class="loan-app-rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                            <span style="margin-left: 5px; color: var(--gray);">4.4</span>
+                        </div>
+                        <button class="btn btn-outline" onclick="applyForLoan('Timiza')">Learn More</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Why Check Your CRB Status?</h2>
+                <p>Regularly monitoring your credit status helps you maintain financial health and access better credit opportunities.</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h3>Monitor Your Credit</h3>
+                    <p>Regularly check your credit report to ensure accuracy and detect any unauthorized activities or errors.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3>Improve Loan Approval</h3>
+                    <p>A good credit score increases your chances of loan approval and helps you get better interest rates.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-certificate"></i>
+                    </div>
+                    <h3>Get Clearance Certificates</h3>
+                    <p>Obtain CRB clearance certificates required by employers, landlords, and financial institutions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>CreditCheck Kenya</h3>
+                    <p>Helping Kenyans access their credit information and find suitable financial products. Not affiliated with any CRB or financial institution.</p>
+                    <p style="margin-top: 15px;"><i class="fas fa-phone"></i> 0712 345 678</p>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#checker">CRB Check</a></li>
+                        <li><a href="#crb-options">CRB Bureaus</a></li>
+                        <li><a href="#loan-apps">Loan Apps</a></li>
+                        <li><a href="#features">Why Check Credit</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>CRB Resources</h3>
+                    <ul>
+                        <li><a href="#">Creditinfo Kenya</a></li>
+                        <li><a href="#">Metropol CRB</a></li>
+                        <li><a href="#">TransUnion Kenya</a></li>
+                        <li><a href="#">Central Bank of Kenya</a></li>
+                        <li><a href="#">Data Protection Act</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Contact Us</h3>
+                    <ul>
+                        <li><i class="fas fa-map-marker-alt"></i> Nairobi, Kenya</li>
+                        <li><i class="fas fa-envelope"></i> info@creditcheckkenya.co.ke</li>
+                        <li><i class="fab fa-twitter"></i> @CreditCheckKE</li>
+                        <li><i class="fab fa-facebook"></i> CreditCheck Kenya</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2023 CreditCheck Kenya. This is a demonstration website only. | <a href="#" style="color:#bdc3c7;">Privacy Policy</a> | <a href="#" style="color:#bdc3c7;">Terms of Service</a></p>
+                <p style="margin-top: 10px; font-size: 12px;">Credit Reference Bureaus in Kenya are licensed and regulated by the Central Bank of Kenya (CBK)</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Scroll to checker function
+        function scrollToChecker() {
+            document.getElementById('checker').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Scroll to loan apps function
+        function scrollToLoanApps() {
+            document.getElementById('loan-apps').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Perform CRB check
+        function performCRBCheck() {
+            // Get form values
+            const fullName = document.getElementById('fullName').value;
+            const idNumber = document.getElementById('idNumber').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const emailAddress = document.getElementById('emailAddress').value;
+            const crbOption = document.getElementById('crbOption').value;
+            
+            // Basic validation
+            if (!fullName || !idNumber || !phoneNumber || !emailAddress || !crbOption) {
+                alert('Please fill in all required fields before checking your credit status.');
+                return;
+            }
+            
+            // Generate random results for demonstration
+            const checkId = 'CRB-' + Math.floor(10000 + Math.random() * 90000);
+            const statusOptions = ['Good Standing', 'Default Listed', 'Watch List'];
+            const randomStatus = statusOptions[Math.floor(Math.random() * statusOptions.length)];
+            
+            // Format date
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('en-GB');
+            
+            // Set CRB name
+            let crbName = '';
+            switch(crbOption) {
+                case 'creditinfo': crbName = 'Creditinfo Kenya'; break;
+                case 'metropol': crbName = 'Metropol Credit Reference Bureau'; break;
+                case 'transunion': crbName = 'TransUnion Kenya'; break;
+                default: crbName = 'Credit Reference Bureau';
+            }
+            
+            // Set result values
+            document.getElementById('resultName').textContent = fullName;
+            document.getElementById('resultID').textContent = idNumber;
+            document.getElementById('resultPhone').textContent = phoneNumber;
+            document.getElementById('resultCRB').textContent = crbName;
+            document.getElementById('verificationDate').textContent = formattedDate;
+            
+            // Set status and details based on random result
+            if (randomStatus === 'Good Standing') {
+                document.getElementById('resultStatus').textContent = 'Good Standing';
+                document.getElementById('resultStatus').className = 'result-status status-clear';
+                document.getElementById('statusText').textContent = 'No negative listings - Eligible for credit';
+                document.getElementById('resultScore').textContent = Math.floor(600 + Math.random() * 200) + '/900 (Good)';
+                document.getElementById('resultLoans').textContent = Math.floor(1 + Math.random() * 3) + ' active loans (KSh ' + Math.floor(10000 + Math.random() * 150000) + ' total)';
+                document.getElementById('resultHistory').textContent = (85 + Math.floor(Math.random() * 15)) + '% on-time payments';
+            } else if (randomStatus === 'Default Listed') {
+                document.getElementById('resultStatus').textContent = 'Default Listed';
+                document.getElementById('resultStatus').className = 'result-status status-flagged';
+                document.getElementById('statusText').textContent = 'Has defaulted on loan payments - Not eligible for new credit';
+                document.getElementById('resultScore').textContent = Math.floor(300 + Math.random() * 150) + '/900 (Poor)';
+                document.getElementById('resultLoans').textContent = Math.floor(1 + Math.random() * 4) + ' loans (1 default)';
+                document.getElementById('resultHistory').textContent = (40 + Math.floor(Math.random() * 30)) + '% on-time payments';
+            } else {
+                document.getElementById('resultStatus').textContent = 'Watch List';
+                document.getElementById('resultStatus').className = 'result-status status-warning';
+                document.getElementById('statusText').textContent = 'Some late payments - Limited credit options available';
+                document.getElementById('resultScore').textContent = Math.floor(450 + Math.random() * 150) + '/900 (Fair)';
+                document.getElementById('resultLoans').textContent = Math.floor(1 + Math.random() * 3) + ' active loans';
+                document.getElementById('resultHistory').textContent = (70 + Math.floor(Math.random() * 20)) + '% on-time payments';
+            }
+            
+            // Show results section
+            document.getElementById('resultsCard').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            
+            // Show success message
+            alert('CRB check completed successfully. Results are displayed below.');
+        }
+        
+        // Apply for loan function
+        function applyForLoan(loanApp) {
+            alert('This is a demonstration. In a real application, you would be redirected to apply for a loan with ' + loanApp + '.');
+            
+            // In a real implementation, you would redirect to the actual loan app
+            // window.open('https://' + loanApp.toLowerCase().replace(' ', '') + '.com/apply', '_blank');
+        }
+        
+        // Initialize with demo data
+        document.addEventListener('DOMContentLoaded', function() {
+            // Demo data for testing
+            document.getElementById('fullName').value = 'John Mwangi';
+            document.getElementById('idNumber').value = '12345678';
+            document.getElementById('phoneNumber').value = '0712 345 678';
+            document.getElementById('emailAddress').value = 'john.mwangi@example.com';
+            document.getElementById('crbOption').value = 'creditinfo';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureCheck | Professional CRB Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #1abc9c;
+            --light: #f8f9fa;
+            --dark: #2c3e50;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --gray: #95a5a6;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* Header Styles */
+        header {
+            background-color: white;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            color: var(--accent);
+            font-size: 28px;
+        }
+
+        .logo h1 {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 15px;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--secondary);
+            color: var(--secondary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #16a085;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .hero-text h2 {
+            font-size: 42px;
+            color: var(--primary);
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .hero-text p {
+            font-size: 18px;
+            color: var(--gray);
+            margin-bottom: 30px;
+        }
+
+        .hero-image {
+            text-align: center;
+        }
+
+        .hero-image img {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Checker Section */
+        .checker-section {
+            padding: 80px 0;
+            background-color: white;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .section-title h2 {
+            font-size: 36px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .section-title p {
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .checker-form {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .disclaimer {
+            font-size: 14px;
+            color: var(--gray);
+            max-width: 60%;
+        }
+
+        /* Results Section */
+        .results-section {
+            padding: 80px 0;
+            background-color: #f8f9fa;
+        }
+
+        .results-card {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-header h3 {
+            color: var(--primary);
+            font-size: 28px;
+        }
+
+        .result-status {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-clear {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success);
+        }
+
+        .status-flagged {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+        }
+
+        .results-details {
+            margin-bottom: 30px;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .detail-label {
+            width: 200px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .detail-value {
+            flex: 1;
+        }
+
+        .verification-date {
+            text-align: center;
+            color: var(--gray);
+            font-style: italic;
+            margin-top: 30px;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 80px 0;
+            background-color: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            background-color: rgba(26, 188, 156, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon i {
+            font-size: 28px;
+            color: var(--accent);
+        }
+
+        .feature-card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: var(--gray);
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--primary);
+            color: white;
+            padding: 60px 0 30px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-column h3 {
+            font-size: 20px;
+            margin-bottom: 25px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .footer-column h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background-color: var(--accent);
+        }
+
+        .footer-column ul {
+            list-style: none;
+        }
+
+        .footer-column ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer-column ul li a {
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-column ul li a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #bdc3c7;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            nav ul {
+                gap: 15px;
+            }
+            
+            .hero-text h2 {
+                font-size: 32px;
+            }
+            
+            .checker-form {
+                padding: 25px;
+            }
+            
+            .form-footer {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .disclaimer {
+                max-width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Secure<span>Check</span></h1>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#checker">CRB Check</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </nav>
+                <div class="auth-buttons">
+                    <button class="btn btn-outline">Log In</button>
+                    <button class="btn btn-primary">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h2>Professional Criminal Record Background Checks</h2>
+                    <p>SecureCheck provides fast, accurate, and legally compliant CRB verification for employers, organizations, and individuals. Ensure safety and compliance with our trusted service.</p>
+                    <button class="btn btn-primary" onclick="scrollToChecker()">Start Verification <i class="fas fa-arrow-right"></i></button>
+                </div>
+                <div class="hero-image">
+                    <img src="https://images.unsplash.com/photo-1553877522-43269d4ea984?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Security and Verification">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Checker Section -->
+    <section class="checker-section" id="checker">
+        <div class="container">
+            <div class="section-title">
+                <h2>CRB Verification Check</h2>
+                <p>Enter the required information to perform a secure criminal background check. All data is encrypted and handled in compliance with data protection regulations.</p>
+            </div>
+            
+            <div class="checker-form">
+                <div class="form-group">
+                    <label for="fullName">Full Name *</label>
+                    <input type="text" id="fullName" class="form-control" placeholder="Enter full name as on official documents">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth *</label>
+                        <input type="date" id="dateOfBirth" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="nationality">Nationality *</label>
+                        <select id="nationality" class="form-control">
+                            <option value="">Select Nationality</option>
+                            <option value="UK">United Kingdom</option>
+                            <option value="US">United States</option>
+                            <option value="CA">Canada</option>
+                            <option value="AU">Australia</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="idNumber">Government ID Number *</label>
+                    <input type="text" id="idNumber" class="form-control" placeholder="Passport, Driver's License, or National ID">
+                </div>
+                
+                <div class="form-group">
+                    <label for="address">Current Address *</label>
+                    <input type="text" id="address" class="form-control" placeholder="Enter current residential address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="purpose">Purpose of Check *</label>
+                    <select id="purpose" class="form-control">
+                        <option value="">Select Purpose</option>
+                        <option value="employment">Employment Screening</option>
+                        <option value="volunteer">Volunteer Work</option>
+                        <option value="license">Professional Licensing</option>
+                        <option value="tenant">Tenant Screening</option>
+                        <option value="personal">Personal Check</option>
+                    </select>
+                </div>
+                
+                <div class="form-footer">
+                    <div class="disclaimer">
+                        <i class="fas fa-lock"></i> Your information is secure and encrypted. We comply with GDPR and data protection laws.
+                    </div>
+                    <button class="btn btn-primary" onclick="performCheck()">Run Background Check <i class="fas fa-search"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="results">
+        <div class="container">
+            <div class="section-title">
+                <h2>Verification Results</h2>
+                <p>Review the results of the criminal background check below. This is a simulated demonstration.</p>
+            </div>
+            
+            <div class="results-card" id="resultsCard">
+                <div class="results-header">
+                    <h3>CRB Check Result</h3>
+                    <div class="result-status status-clear" id="resultStatus">Clear</div>
+                </div>
+                
+                <div class="results-details">
+                    <div class="detail-row">
+                        <div class="detail-label">Full Name:</div>
+                        <div class="detail-value" id="resultName">Johnathan Smith</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Date of Birth:</div>
+                        <div class="detail-value" id="resultDOB">15/08/1985</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Verification ID:</div>
+                        <div class="detail-value" id="resultID">CHK-2023-85742</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Check Type:</div>
+                        <div class="detail-value" id="resultType">Standard CRB Check</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Status:</div>
+                        <div class="detail-value"><span id="statusText">No criminal records found</span></div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Details:</div>
+                        <div class="detail-value" id="resultDetails">This individual has no unspent convictions, cautions, reprimands or warnings recorded on the Police National Computer (PNC).</div>
+                    </div>
+                </div>
+                
+                <div class="verification-date">
+                    <i class="far fa-calendar-alt"></i> Verified on: <span id="verificationDate">24/10/2023</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Why Choose SecureCheck</h2>
+                <p>Our platform offers comprehensive solutions for all your background verification needs.</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Fast Results</h3>
+                    <p>Receive comprehensive background check results within 24-48 hours for standard verifications.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Secure & Compliant</h3>
+                    <p>All checks are performed in full compliance with data protection laws including GDPR.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <h3>Official Certificates</h3>
+                    <p>Receive digitally signed certificates that can be verified online by employers or organizations.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>SecureCheck</h3>
+                    <p>Professional CRB verification services trusted by organizations worldwide. Ensuring safe environments through reliable background checks.</p>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#checker">CRB Check</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Services</h3>
+                    <ul>
+                        <li><a href="#">Basic Check</a></li>
+                        <li><a href="#">Standard Check</a></li>
+                        <li><a href="#">Enhanced Check</a></li>
+                        <li><a href="#">International Check</a></li>
+                        <li><a href="#">Continuous Monitoring</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-column">
+                    <h3>Contact Us</h3>
+                    <ul>
+                        <li><i class="fas fa-map-marker-alt"></i> 123 Security Street, London, UK</li>
+                        <li><i class="fas fa-phone"></i> +44 20 7123 4567</li>
+                        <li><i class="fas fa-envelope"></i> info@securecheck.com</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2023 SecureCheck. All rights reserved. | <a href="#" style="color:#bdc3c7;">Privacy Policy</a> | <a href="#" style="color:#bdc3c7;">Terms of Service</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Scroll to checker function
+        function scrollToChecker() {
+            document.getElementById('checker').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Perform background check
+        function performCheck() {
+            // Get form values
+            const fullName = document.getElementById('fullName').value;
+            const dob = document.getElementById('dateOfBirth').value;
+            const nationality = document.getElementById('nationality').value;
+            const idNumber = document.getElementById('idNumber').value;
+            const purpose = document.getElementById('purpose').value;
+            
+            // Basic validation
+            if (!fullName || !dob || !nationality || !idNumber || !purpose) {
+                alert('Please fill in all required fields before running the check.');
+                return;
+            }
+            
+            // Generate random results for demonstration
+            const checkId = 'CHK-' + new Date().getFullYear() + '-' + Math.floor(10000 + Math.random() * 90000);
+            const statusOptions = ['Clear', 'Flagged'];
+            const randomStatus = statusOptions[Math.floor(Math.random() * statusOptions.length)];
+            
+            // Format date
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('en-GB');
+            
+            // Format DOB
+            const dobDate = new Date(dob);
+            const formattedDOB = dobDate.toLocaleDateString('en-GB');
+            
+            // Set result values
+            document.getElementById('resultName').textContent = fullName;
+            document.getElementById('resultDOB').textContent = formattedDOB;
+            document.getElementById('resultID').textContent = checkId;
+            document.getElementById('resultType').textContent = document.getElementById('purpose').options[document.getElementById('purpose').selectedIndex].text + ' Check';
+            document.getElementById('verificationDate').textContent = formattedDate;
+            
+            // Set status and details based on random result
+            if (randomStatus === 'Clear') {
+                document.getElementById('resultStatus').textContent = 'Clear';
+                document.getElementById('resultStatus').className = 'result-status status-clear';
+                document.getElementById('statusText').textContent = 'No criminal records found';
+                document.getElementById('resultDetails').textContent = 'This individual has no unspent convictions, cautions, reprimands or warnings recorded on the Police National Computer (PNC).';
+            } else {
+                document.getElementById('resultStatus').textContent = 'Flagged';
+                document.getElementById('resultStatus').className = 'result-status status-flagged';
+                document.getElementById('statusText').textContent = 'Criminal records found';
+                document.getElementById('resultDetails').textContent = 'This individual has records on the Police National Computer (PNC). Details are available to authorized organizations only.';
+            }
+            
+            // Show results section
+            document.getElementById('resultsCard').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            
+            // Show success message
+            alert('Background check completed successfully. Results are displayed below.');
+        }
+        
+        // Initialize with today's date as default for date of birth (for demo purposes)
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const thirtyYearsAgo = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+            document.getElementById('dateOfBirth').valueAsDate = thirtyYearsAgo;
+            
+            // Demo data for testing
+            document.getElementById('fullName').value = 'Johnathan Smith';
+            document.getElementById('idNumber').value = 'PASSPORT789123';
+            document.getElementById('address').value = '123 Baker Street, London, UK';
+        });
+    </script>
+</body>
+</html>

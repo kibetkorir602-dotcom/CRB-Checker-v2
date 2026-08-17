@@ -17,12 +17,17 @@ const CreditCheck = () => {
   };
 
   const performCRBCheck = () => {
+    // Basic validation
     if (!formData.fullName || !formData.idNumber || !formData.phoneNumber || !formData.emailAddress || !formData.crbOption) {
       alert('Please fill in all required fields before checking your credit status.');
+      
       return;
     }
 
+    // Store form data in localStorage to use in results component
     localStorage.setItem('crbCheckData', JSON.stringify(formData));
+    
+    // Redirect to payment page
     navigate("/service-payment");
   };
 

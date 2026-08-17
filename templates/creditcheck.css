@@ -1,0 +1,647 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+:root {
+    --primary: #2c3e50;
+    --secondary: #3498db;
+    --accent: #1abc9c;
+    --light: #f8f9fa;
+    --dark: #2c3e50;
+    --danger: #e74c3c;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --gray: #95a5a6;
+    --kenya-green: #006600;
+    --kenya-red: #BB0000;
+    --kenya-black: #000000;
+    --kenya-white: #FFFFFF;
+}
+
+body {
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Header Styles (for reference - to be in separate component) */
+header {
+    background-color: white;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo i {
+    color: var(--kenya-green);
+    font-size: 28px;
+}
+
+.logo h1 {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 24px;
+}
+
+.logo span {
+    color: var(--kenya-green);
+}
+
+.kenya-flag {
+    display: inline-block;
+    width: 24px;
+    height: 16px;
+    background: linear-gradient(to bottom, 
+        var(--kenya-black) 0%, 
+        var(--kenya-black) 33%, 
+        var(--kenya-red) 33%, 
+        var(--kenya-red) 66%, 
+        var(--kenya-green) 66%, 
+        var(--kenya-green) 100%);
+    margin-left: 5px;
+    border-radius: 2px;
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+}
+
+nav a {
+    text-decoration: none;
+    color: var(--dark);
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: var(--kenya-green);
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+    font-size: 15px;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 2px solid var(--kenya-green);
+    color: var(--kenya-green);
+}
+
+.btn-outline:hover {
+    background-color: var(--kenya-green);
+    color: white;
+}
+
+.btn-primary {
+    background-color: var(--kenya-green);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #004d00;
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #2980b9;
+}
+
+/* Hero Section */
+.hero {
+    padding: 80px 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+}
+
+.hero-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 50px;
+    align-items: center;
+}
+
+.hero-text h2 {
+    font-size: 42px;
+    color: var(--primary);
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.hero-text p {
+    font-size: 18px;
+    color: var(--gray);
+    margin-bottom: 30px;
+}
+
+.hero-image {
+    text-align: center;
+}
+
+.hero-image img {
+    max-width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Checker Section */
+.checker-section {
+    padding: 80px 0;
+    background-color: white;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.section-title h2 {
+    font-size: 36px;
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.section-title p {
+    color: var(--gray);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.checker-form {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 10px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.form-control {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e0e6ed;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--kenya-green);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.disclaimer {
+    font-size: 14px;
+    color: var(--gray);
+    max-width: 60%;
+}
+
+/* CRB Options Section */
+.crb-options {
+    padding: 60px 0;
+    background-color: #f8f9fa;
+}
+
+.crb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.crb-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s;
+    text-align: center;
+}
+
+.crb-card:hover {
+    transform: translateY(-5px);
+}
+
+.crb-icon {
+    width: 70px;
+    height: 70px;
+    background-color: rgba(0, 102, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.crb-icon i {
+    font-size: 28px;
+    color: var(--kenya-green);
+}
+
+.crb-card h3 {
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.crb-card p {
+    color: var(--gray);
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+/* Results Section */
+.results-section {
+    padding: 80px 0;
+    background-color: #f8f9fa;
+}
+
+.results-card {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 10px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.results-header h3 {
+    color: var(--primary);
+    font-size: 28px;
+}
+
+.result-status {
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.status-clear {
+    background-color: rgba(39, 174, 96, 0.1);
+    color: var(--success);
+}
+
+.status-flagged {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: var(--danger);
+}
+
+.status-warning {
+    background-color: rgba(243, 156, 18, 0.1);
+    color: var(--warning);
+}
+
+.results-details {
+    margin-bottom: 30px;
+}
+
+.detail-row {
+    display: flex;
+    padding: 15px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.detail-label {
+    width: 200px;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.detail-value {
+    flex: 1;
+}
+
+.verification-date {
+    text-align: center;
+    color: var(--gray);
+    font-style: italic;
+    margin-top: 30px;
+}
+
+/* Loan Apps Section */
+.loan-apps-section {
+    padding: 80px 0;
+    background-color: white;
+}
+
+.loan-apps-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.loan-app-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s;
+    border-left: 4px solid var(--kenya-green);
+}
+
+.loan-app-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.loan-app-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.loan-app-icon {
+    width: 60px;
+    height: 60px;
+    background-color: rgba(0, 102, 0, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 20px;
+}
+
+.loan-app-icon i {
+    font-size: 24px;
+    color: var(--kenya-green);
+}
+
+.loan-app-info h3 {
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.loan-app-info p {
+    color: var(--gray);
+    font-size: 14px;
+}
+
+.loan-app-details {
+    margin-bottom: 25px;
+}
+
+.loan-app-details p {
+    color: var(--dark);
+    margin-bottom: 10px;
+    font-size: 15px;
+}
+
+.eligibility {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+.eligibility i {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+.eligibility.eligible i {
+    color: var(--success);
+}
+
+.eligibility.not-eligible i {
+    color: var(--danger);
+}
+
+.loan-app-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.loan-app-rating {
+    display: flex;
+    align-items: center;
+    color: var(--warning);
+}
+
+/* Features Section */
+.features-section {
+    padding: 80px 0;
+    background-color: #f8f9fa;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.feature-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.feature-icon {
+    width: 70px;
+    height: 70px;
+    background-color: rgba(0, 102, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.feature-icon i {
+    font-size: 28px;
+    color: var(--kenya-green);
+}
+
+.feature-card h3 {
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.feature-card p {
+    color: var(--gray);
+}
+
+/* Footer (for reference - to be in separate component) */
+footer {
+    background-color: var(--primary);
+    color: white;
+    padding: 60px 0 30px;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.footer-column h3 {
+    font-size: 20px;
+    margin-bottom: 25px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.footer-column h3::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background-color: var(--kenya-green);
+}
+
+.footer-column ul {
+    list-style: none;
+}
+
+.footer-column ul li {
+    margin-bottom: 10px;
+}
+
+.footer-column ul li a {
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-column ul li a:hover {
+    color: white;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #bdc3c7;
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    
+    .loan-apps-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    nav ul {
+        gap: 15px;
+    }
+    
+    .hero-text h2 {
+        font-size: 32px;
+    }
+    
+    .checker-form {
+        padding: 25px;
+    }
+    
+    .form-footer {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .disclaimer {
+        max-width: 100%;
+        text-align: center;
+    }
+}
